@@ -46,7 +46,7 @@ game-rent/
 
 ---
 
-## ⚙️ Getting Started
+## Getting Started
 
 ### Backend
 
