@@ -1,133 +1,80 @@
 <div align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&height=250&color=1A1A1A&text=Game%20Rent&section=header&reversal=false&textBg=false&fontColor=C8F135"/>
 
-  <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&size=22&pause=1000&color=C8F135&background=00000000&width=500&lines=Rent+games.+Play+now.+Return+later.;Full-Stack+Django+%2B+React+Project.;JWT+Auth+%7C+Admin+Panel+%7C+Email+Flow." alt="Typing SVG" />
+<br/>
 
-  <br/>
+<a href="https://git.io/typing-svg">
+  <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=600&size=30&pause=1000&color=FFFFFF&center=true&vCenter=true&width=500&lines=🎮+Game+Rent;Rent.+Play.+Return." alt="Typing SVG" />
+</a>
 
-  <p>
-    <img src="https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white" alt="Django">
-    <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React">
-    <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
-    <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind">
-    <img src="https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite">
-  </p>
+<br/>
+
+<p>
+  <img src="https://img.shields.io/badge/Django-6.0-092E20?style=flat-square&logo=django&logoColor=white"/>
+  <img src="https://img.shields.io/badge/React-19-20232A?style=flat-square&logo=react&logoColor=61DAFB"/>
+  <img src="https://img.shields.io/badge/TypeScript-5.9-007ACC?style=flat-square&logo=typescript&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white"/>
+  <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square"/>
+</p>
+
 </div>
 
 <br/>
 
 ---
 
-## About the Project
+## `~/about`
 
-```javascript
+```ts
 const gameRent = {
-  description: "Digital game rental platform",
-  stack: {
-    backend:  ["Django 6", "Django REST Framework", "JWT Auth", "SQLite"],
-    frontend: ["React 19", "TypeScript", "Vite", "Tailwind CSS", "Axios"],
-  },
-  features: ["Game catalog", "Rentals with activation keys", "Admin portal", "Email verification"],
-  author: "Mauro Junior",
-};
+  type:        "Full-Stack Web Application",
+  backend:     ["Python", "Django 6", "Django REST Framework", "JWT", "SQLite"],
+  frontend:    ["React 19", "TypeScript", "Vite", "Tailwind CSS", "Axios"],
+  features:    ["Game catalog", "Digital rentals", "Activation keys", "Admin panel", "Email flow"],
+  author:      "Mauro Junior · github.com/mj01px",
+} as const;
 ```
 
-**Game Rent** is a full-stack application where users can rent digital games for a set period and receive activation keys directly on the platform. It includes a complete admin panel for managing games, users, and refunds.
-
----
-
-## Project Structure
+**Game Rent** is a full-stack platform where users can rent digital games for a fixed period and receive activation keys instantly. Built with a RESTful Django API and a React + TypeScript frontend, it includes a complete admin dashboard for managing the entire catalog, users, and refund requests.
 
 ```
 game-rent/
-├── game-rent-api/     # Django REST API
-└── game-rent-app/     # React Frontend
+├── game-rent-api/     # Django REST API  →  http://localhost:8000
+└── game-rent-app/     # React Frontend  →  http://localhost:5173
 ```
 
 ---
 
-## Getting Started
-
-### Backend
-
-```bash
-# Clone the repository
-git clone https://github.com/mj01px/game-rent.git
-cd game-rent/game-rent-api
-
-# Create and activate virtual environment
-python -m venv venv
-venv\Scripts\activate        # Windows
-source venv/bin/activate     # Linux/Mac
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Apply migrations
-python manage.py migrate
-
-# Create admin user
-python manage.py createsuperuser
-
-# Start the server
-python manage.py runserver
-```
-
-> API available at: `http://localhost:8000`
-
-### Frontend
-
-```bash
-cd game-rent-app
-npm install
-npm run dev
-```
-
-> App available at: `http://localhost:5173`
-
----
-
-## Environment Variables
-
-Create a `.env` file inside `game-rent-api/`:
-
-```env
-SECRET_KEY=your_secret_key_here
-DEBUG=True
-FRONTEND_URL=http://localhost:5173
-
-# Email (Brevo SMTP)
-EMAIL_HOST_USER=your_email@brevo.com
-EMAIL_HOST_PASSWORD=your_smtp_password
-DEFAULT_FROM_EMAIL=noreply@gamerent.com
-```
----
-
-## Features
+## `~/features`
 
 <table>
   <tr>
-    <td width="50%">
-      <h3 align="center"> For Users</h3>
+    <td valign="top" width="50%">
+      <b>👤 Users</b><br/><br/>
       <ul>
         <li>Register & login with email verification</li>
-        <li>Game catalog with filters and sorting</li>
+        <li>Catalog with search, filters & sorting</li>
         <li>Favorites synced to account</li>
-        <li>Cart with rental duration selection</li>
-        <li>Checkout with Card, Pix & PayPal</li>
-        <li>Activation keys delivered after payment</li>
+        <li>Cart with duration selector — <code>1w · 2w · 1mo</code></li>
+        <li>Checkout — Card, Pix & PayPal</li>
+        <li>Activation keys delivered on payment</li>
         <li>Rental history & refund requests</li>
-        <li>Profile with avatar, username & email change</li>
+        <li>Profile — avatar, username, email & password</li>
       </ul>
     </td>
-    <td width="50%">
-      <h3 align="center"> For Admins</h3>
+    <td valign="top" width="50%">
+      <b>🛠️ Admins</b><br/><br/>
       <ul>
-        <li>Full game management (create, edit, delete)</li>
-        <li>Add and manage activation keys</li>
-        <li>View all rentals across users</li>
-        <li>User management with password reset</li>
-        <li>Approve or reject refund requests</li>
+        <li>Full game CRUD with key management</li>
+        <li>Complete rentals overview</li>
+        <li>User management & password reset</li>
+        <li>Refund approval / rejection</li>
+      </ul>
+      <br/>
+      <b>📧 Email Flow</b><br/><br/>
+      <ul>
+        <li>Account email verification on register</li>
+        <li>Email & password change confirmation</li>
+        <li>Admin-triggered password reset</li>
       </ul>
     </td>
   </tr>
@@ -135,36 +82,80 @@ DEFAULT_FROM_EMAIL=noreply@gamerent.com
 
 ---
 
-##  Tech Stack
+## `~/getting-started`
+
+### Backend
+
+```bash
+cd game-rent-api
+
+# Setup
+python -m venv venv
+venv\Scripts\activate          # Windows
+source venv/bin/activate       # Linux / macOS
+
+# Install & run
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver     # → http://localhost:8000
+```
+
+### Frontend
+
+```bash
+cd game-rent-app
+npm install && npm run dev     # → http://localhost:5173
+```
+
+---
+
+## `~/environment`
+
+Create `.env` inside `game-rent-api/`:
+
+```env
+# Django
+SECRET_KEY=your_secret_key_here
+DEBUG=True
+
+# URLs
+FRONTEND_URL=http://localhost:5173
+
+# Email — Brevo SMTP
+EMAIL_HOST_USER=your@email.com
+EMAIL_HOST_PASSWORD=your_smtp_password
+DEFAULT_FROM_EMAIL=noreply@gamerent.com
+```
+
+> **Tip:** generate a secure `SECRET_KEY` with:
+> ```bash
+> python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+> ```
+
+---
+
+## `~/stack`
 
 <div align="center">
 
-### Backend
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Django](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white)
-![DRF](https://img.shields.io/badge/Django_REST-ff1709?style=for-the-badge&logo=django&logoColor=white)
-![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=JSON%20web%20tokens&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
-
-### Frontend
-![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
-![Axios](https://img.shields.io/badge/Axios-5A29E4?style=for-the-badge&logo=axios&logoColor=white)
+| Layer | Technologies |
+|-------|-------------|
+| **Backend** | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white) ![Django](https://img.shields.io/badge/Django-092E20?style=flat-square&logo=django&logoColor=white) ![DRF](https://img.shields.io/badge/DRF-ff1709?style=flat-square&logo=django&logoColor=white) ![JWT](https://img.shields.io/badge/JWT-000000?style=flat-square&logo=jsonwebtokens&logoColor=white) |
+| **Frontend** | ![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB) ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white) ![Tailwind](https://img.shields.io/badge/Tailwind-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white) |
+| **Database** | ![SQLite](https://img.shields.io/badge/SQLite-07405E?style=flat-square&logo=sqlite&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=flat-square&logo=postgresql&logoColor=white) |
+| **Email** | ![Brevo](https://img.shields.io/badge/Brevo_SMTP-0B996E?style=flat-square&logo=sendinblue&logoColor=white) |
 
 </div>
 
 ---
 
 <div align="center">
-
-  ### Built by Mauro Junior
-
-  [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/mauroapjunior/)
-  [![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/mj01px)
-
-  <img src="https://capsule-render.vercel.app/api?type=waving&height=150&color=1A1A1A&section=footer&reversal=false"/>
-
+  <br/>
+  <sub>
+    Built by <a href="https://github.com/mj01px"><strong>Mauro Junior</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://www.linkedin.com/in/mauroapjunior/">LinkedIn</a>
+  </sub>
+  <br/><br/>
 </div>
