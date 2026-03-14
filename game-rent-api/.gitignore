@@ -1,0 +1,14 @@
+.env
+db.sqlite3
+venv/
+.idea/
+media/*
+!media/avatars/
+!media/game_images/
+!media/publisher_logos/
+media/avatars/*
+media/game_images/*
+media/publisher_logos/*
+!media/avatars/.gitkeep
+!media/game_images/.gitkeep
+!media/publisher_logos/.gitkeep
