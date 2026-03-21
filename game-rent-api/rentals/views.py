@@ -1,235 +1,162 @@
 from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.utils import timezone
-from .models import Rental, RefundRequest
-from .serializers import RentalSerializer, CreateRentalSerializer
 
-PLATFORM_MAP = {
-    'pc': 'PC', 'ps5': 'PlayStation 5', 'ps4': 'PlayStation 4',
-    'xbox_series': 'Xbox Series X/S', 'xbox_one': 'Xbox One',
-    'nintendo_switch': 'Nintendo Switch', 'mobile': 'Mobile',
-}
+from core.exceptions import UserNotFound
+from core.permissions import IsAdminUser
+from core.responses import api_error, api_response
+from .selectors import (
+    get_all_rentals,
+    get_refund_requests,
+    get_rental_by_id,
+    get_user_rentals,
+    get_users_with_rental_stats,
+)
+from .serializers import (
+    AdminRefundSerializer,
+    AdminRentalSerializer,
+    AdminUserSerializer,
+    CreateRentalSerializer,
+    RentalSerializer,
+)
+from .services import create_rental, request_refund, resolve_refund
 
-# ─── USER ENDPOINTS ──────────────────────────────────────────────
+
+# ─── USER ENDPOINTS ───────────────────────────────────────────────────────────
 
 class RentalListView(generics.ListAPIView):
+    """Lista os aluguéis do usuário autenticado."""
+
     serializer_class = RentalSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Rental.objects.filter(user=self.request.user)
+        return get_user_rentals(self.request.user)
 
 
 class CreateRentalView(APIView):
+    """Cria um novo aluguel para o usuário autenticado."""
+
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
-        serializer = CreateRentalSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            rental = serializer.save()
-            return Response(RentalSerializer(rental).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def post(self, request: Request) -> Response:
+        serializer = CreateRentalSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        rental = create_rental(
+            user=request.user,
+            game_id=serializer.validated_data["game_id"],
+            rental_days=serializer.validated_data["rental_days"],
+        )
+
+        return api_response(
+            data=RentalSerializer(rental, context={"request": request}).data,
+            status_code=status.HTTP_201_CREATED,
+        )
 
 
 class RentalDetailView(generics.RetrieveAPIView):
+    """Detalhe de um aluguel do usuário autenticado."""
+
     serializer_class = RentalSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        return Rental.objects.filter(user=self.request.user)
+    def get_object(self) -> Rental:
+        return get_rental_by_id(self.kwargs["pk"], user=self.request.user)
+
+    def retrieve(self, request: Request, *args, **kwargs) -> Response:
+        rental = self.get_object()
+        serializer = self.get_serializer(rental, context={"request": request})
+        return api_response(data=serializer.data)
 
 
 class RequestRefundView(APIView):
-    """Usuário solicita reembolso de um aluguel."""
+    """Solicita reembolso de um aluguel."""
+
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, pk):
-        try:
-            rental = Rental.objects.get(pk=pk, user=request.user)
-        except Rental.DoesNotExist:
-            return Response({'error': 'Rental not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-        if rental.status not in ('active', 'pending'):
-            return Response({'error': 'Only active or pending rentals can be refunded.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if hasattr(rental, 'refund_request'):
-            return Response({'error': 'Refund already requested.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        reason = request.data.get('reason', '')
-        RefundRequest.objects.create(rental=rental, user=request.user, reason=reason)
-        return Response({'detail': 'Refund request submitted. Awaiting admin approval.'}, status=status.HTTP_201_CREATED)
+    def post(self, request: Request, pk: int) -> Response:
+        request_refund(
+            user=request.user,
+            rental_id=pk,
+            reason=request.data.get("reason", ""),
+        )
+        return api_response(
+            data={"detail": "Solicitação de reembolso enviada. Aguardando aprovação."},
+            status_code=status.HTTP_201_CREATED,
+        )
 
 
-# ─── ADMIN ENDPOINTS ─────────────────────────────────────────────
+# ─── ADMIN ENDPOINTS ──────────────────────────────────────────────────────────
 
 class AdminRentalListView(APIView):
+    """Lista todos os aluguéis (admin)."""
+
     permission_classes = [IsAdminUser]
 
-    def get(self, request):
-        rentals = Rental.objects.select_related('user', 'game_key__game').all()
-        data = []
-        for r in rentals:
-            game = r.game_key.game
-            avatar_url = None
-            try:
-                profile = r.user.profile
-                if profile and profile.avatar:
-                    avatar_url = request.build_absolute_uri(profile.avatar.url)
-            except Exception:
-                pass
-
-            image_url = None
-            try:
-                if game.image:
-                    image_url = request.build_absolute_uri(game.image.url)
-            except Exception:
-                pass
-
-            data.append({
-                'id': r.id,
-                'username': r.user.username,
-                'user_email': r.user.email,
-                'user_avatar': avatar_url,
-                'game_name': game.name,
-                'game_image': image_url,
-                'platform': PLATFORM_MAP.get(game.platform, game.platform),
-                'status': r.status,
-                'started_at': r.started_at,
-                'expires_at': r.expires_at,
-                'total_paid': str(r.total_paid),
-                'has_refund_request': hasattr(r, 'refund_request'),
-            })
-        return Response(data)
+    def get(self, request: Request) -> Response:
+        rentals = get_all_rentals()
+        serializer = AdminRentalSerializer(rentals, many=True, context={"request": request})
+        return api_response(data=serializer.data)
 
 
 class AdminRefundListView(APIView):
+    """Lista todas as solicitações de reembolso (admin)."""
+
     permission_classes = [IsAdminUser]
 
-    def get(self, request):
-        refunds = RefundRequest.objects.select_related(
-            'user', 'rental__game_key__game', 'resolved_by'
-        ).all()
-        data = []
-        for rf in refunds:
-            game = rf.rental.game_key.game
-            image_url = None
-            try:
-                if game.image:
-                    image_url = request.build_absolute_uri(game.image.url)
-            except Exception:
-                pass
-
-            data.append({
-                'id': rf.id,
-                'rental_id': rf.rental.id,
-                'username': rf.user.username,
-                'user_email': rf.user.email,
-                'game_name': game.name,
-                'game_image': image_url,
-                'total_paid': str(rf.rental.total_paid),
-                'reason': rf.reason,
-                'status': rf.status,
-                'requested_at': rf.requested_at,
-                'resolved_at': rf.resolved_at,
-                'resolved_by': rf.resolved_by.username if rf.resolved_by else None,
-            })
-        return Response(data)
+    def get(self, request: Request) -> Response:
+        refunds = get_refund_requests()
+        serializer = AdminRefundSerializer(refunds, many=True, context={"request": request})
+        return api_response(data=serializer.data)
 
 
 class AdminRefundActionView(APIView):
+    """Aprova ou rejeita uma solicitação de reembolso (admin)."""
+
     permission_classes = [IsAdminUser]
 
-    def post(self, request, pk):
-        try:
-            refund = RefundRequest.objects.select_related('rental__game_key').get(pk=pk)
-        except RefundRequest.DoesNotExist:
-            return Response({'error': 'Refund request not found.'}, status=status.HTTP_404_NOT_FOUND)
+    def post(self, request: Request, pk: int) -> Response:
+        action = request.data.get("action")
+        if action not in ("approve", "reject"):
+            return api_error(
+                code="INVALID_ACTION",
+                message='O campo "action" deve ser "approve" ou "reject".',
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
-        if refund.status != 'pending':
-            return Response({'error': 'This request has already been resolved.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        action = request.data.get('action')
-        if action not in ('approve', 'reject'):
-            return Response({'error': 'action must be "approve" or "reject".'}, status=status.HTTP_400_BAD_REQUEST)
-
-        refund.resolved_by = request.user
-        refund.resolved_at = timezone.now()
-
-        if action == 'approve':
-            refund.status = 'approved'
-            rental = refund.rental
-            rental.status = 'expired'
-            rental.save()
-            game_key = rental.game_key
-            game_key.status = 'available'
-            game_key.save()
-        else:
-            refund.status = 'rejected'
-
-        refund.save()
-        return Response({'detail': f'Refund {refund.status}.'})
+        refund = resolve_refund(admin_user=request.user, refund_id=pk, action=action)
+        return api_response(data={"detail": f"Reembolso {refund.status}."})
 
 
 class AdminUserListView(APIView):
+    """Lista todos os usuários com estatísticas de aluguel (admin)."""
+
     permission_classes = [IsAdminUser]
 
-    def get(self, request):
-        from django.contrib.auth.models import User
-        users = User.objects.select_related('profile').all().order_by('-date_joined')
-        data = []
-        for u in users:
-            profile = getattr(u, 'profile', None)
-            avatar_url = None
-            try:
-                if profile and profile.avatar:
-                    avatar_url = request.build_absolute_uri(profile.avatar.url)
-            except Exception:
-                pass
-            data.append({
-                'id': u.id,
-                'username': u.username,
-                'email': u.email,
-                'is_staff': u.is_staff,
-                'is_active': u.is_active,
-                'date_joined': u.date_joined,
-                'is_verified': profile.is_verified if profile else False,
-                'avatar': avatar_url,
-                'rental_count': u.rentals.count(),
-            })
-        return Response(data)
+    def get(self, request: Request) -> Response:
+        users = get_users_with_rental_stats()
+        serializer = AdminUserSerializer(users, many=True, context={"request": request})
+        return api_response(data=serializer.data)
 
 
 class AdminSendPasswordResetView(APIView):
+    """Envia email de redefinição de senha para um usuário (admin)."""
+
     permission_classes = [IsAdminUser]
 
-    def post(self, request, user_id):
+    def post(self, request: Request, user_id: int) -> Response:
         from django.contrib.auth.models import User
-        from users.models import ProfileChangeToken
-        from django.core.mail import send_mail
-        from django.conf import settings
-        import uuid
+        from users.services import send_password_reset_email
 
         try:
             user = User.objects.get(pk=user_id)
         except User.DoesNotExist:
-            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+            raise UserNotFound()
 
-        token = str(uuid.uuid4())
-        ProfileChangeToken.objects.filter(user=user, change_type='password').delete()
-        ProfileChangeToken.objects.create(user=user, token=token, change_type='password', new_value='')
-
-        confirm_url = f"{settings.FRONTEND_URL}/confirm-change?token={token}&type=password"
-        send_mail(
-            subject='Reset your password — GameRent',
-            message=(
-                f"Hi {user.username},\n\n"
-                f"An administrator has sent you a password reset link.\n\n"
-                f"Click the link below to set a new password:\n{confirm_url}\n\n"
-                f"— GameRent Team"
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
+        send_password_reset_email(user)
+        return api_response(
+            data={"detail": f"Email de redefinição enviado para {user.email}."}
         )
-        return Response({'detail': f'Password reset email sent to {user.email}.'})
