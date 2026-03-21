@@ -1,229 +1,400 @@
 import React, { useState } from 'react'
-import { useApp } from '../../context/AppContext'
-import api, { login, register } from '../../services/api'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
+import api, { login as apiLogin, register as apiRegister } from '../../services/api'
 
-interface LoginProps {
-    setPage: (p: string) => void
-}
+type Tab = 'signin' | 'register'
 
-type Mode = 'login' | 'register' | 'forgot'
+const pwRules = [
+    { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
+    { label: 'Uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
+    { label: 'Lowercase letter', test: (p: string) => /[a-z]/.test(p) },
+    { label: 'Number', test: (p: string) => /\d/.test(p) },
+    { label: 'Special character', test: (p: string) => /[!@#$%^&*]/.test(p) },
+]
 
-function validatePassword(password: string): string {
-    if (password.length < 6) return 'Password must be at least 6 characters.'
-    if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter.'
-    if (!/[a-z]/.test(password)) return 'Password must contain at least one lowercase letter.'
-    if (!/[0-9]/.test(password)) return 'Password must contain at least one number.'
-    if (!/[!@#$%^&*(),.?":{}|<>_\-\[\]\\\/\+\=\~\`\;\'\&]/.test(password)) return 'Password must contain at least one special character (!@#$%^&* etc).'
-    return ''
-}
-
-export default function Login({ setPage }: LoginProps) {
-    const [mode, setMode] = useState<Mode>('login')
+export default function Login() {
+    const navigate = useNavigate()
+    const { saveTokens } = useAuth()
+    const { theme } = useTheme()
+    const [tab, setTab] = useState<Tab>('signin')
     const [username, setUsername] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    const [showPw, setShowPw] = useState(false)
+    const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
-    const [isLoading, setIsLoading] = useState(false)
-    const [registered, setRegistered] = useState(false)
-    const [registeredEmail, setRegisteredEmail] = useState('')
-    const [forgotSent, setForgotSent] = useState(false)
-    const [passwordHint, setPasswordHint] = useState('')
-    const { saveTokens } = useApp()
+    const [success, setSuccess] = useState('')
+    const [forgotEmail, setForgotEmail] = useState('')
+    const [forgotOpen, setForgotOpen] = useState(false)
+    const [forgotLoading, setForgotLoading] = useState(false)
+    const [forgotSuccess, setForgotSuccess] = useState('')
 
-    const handlePasswordChange = (val: string) => {
-        setPassword(val)
-        if (mode === 'register' && val) setPasswordHint(validatePassword(val))
-        else setPasswordHint('')
-    }
+    const reset = () => { setError(''); setSuccess(''); setUsername(''); setEmail(''); setPassword('') }
+    const switchTab = (t: Tab) => { setTab(t); reset() }
 
-    const handleSubmit = async () => {
-        setError('')
-        if (mode === 'forgot') {
-            if (!email) { setError('Please enter your email.'); return }
-            setIsLoading(true)
-            try { await api.post('/users/forgot-password/', { email }) } catch {}
-            finally { setIsLoading(false); setForgotSent(true) }
-            return
-        }
-        if (!username || !password) { setError('Please fill in all fields.'); return }
-        if (mode === 'register' && !email) { setError('Please enter your email.'); return }
-        if (mode === 'register') { const pwErr = validatePassword(password); if (pwErr) { setError(pwErr); return } }
-        setIsLoading(true)
+    const signin = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setLoading(true); setError('')
         try {
-            if (mode === 'login') {
-                const { data } = await login({ username, password })
-                saveTokens(data.access, data.refresh, data.user)
-                setPage('home')
-            } else {
-                await register({ username, email, password })
-                setRegisteredEmail(email)
-                setRegistered(true)
-            }
+            const { data } = await apiLogin({ username, password })
+            saveTokens(data.access, data.refresh, data.user)
+            navigate('/')
         } catch (err: any) {
-            const msg = err?.response?.data
-            if (mode === 'login') {
-                const detail = msg?.non_field_errors?.[0] || ''
-                setError(detail.includes('verify') ? 'Please verify your email before logging in.' : 'Username or password is incorrect.')
-            } else {
-                setError(msg?.error || 'Could not create account. Please try again.')
-            }
-        } finally { setIsLoading(false) }
+            setError(err?.response?.data?.detail || err?.response?.data?.error || 'Invalid credentials.')
+        } finally { setLoading(false) }
     }
 
-    const switchMode = (m: Mode) => { setMode(m); setError(''); setPasswordHint(''); setForgotSent(false) }
+    const registerUser = async (e: React.FormEvent) => {
+        e.preventDefault()
+        const allValid = pwRules.every(r => r.test(password))
+        if (!allValid) { setError('Password does not meet all requirements.'); return }
+        setLoading(true); setError('')
+        try {
+            await apiRegister({ username, email, password })
+            setSuccess('Account created! Check your email to verify.')
+            setUsername(''); setEmail(''); setPassword('')
+        } catch (err: any) {
+            setError(err?.response?.data?.error || 'Registration failed.')
+        } finally { setLoading(false) }
+    }
+
+    const forgot = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setForgotLoading(true)
+        try {
+            await api.post('/users/forgot-password/', { email: forgotEmail })
+        } catch {
+            // always show success to avoid email enumeration
+        } finally {
+            setForgotLoading(false)
+            setForgotSuccess('If this email exists, a reset link was sent.')
+            setForgotEmail('')
+        }
+    }
 
     const inputStyle: React.CSSProperties = {
-        border: '1px solid #E0E0E0', borderRadius: '10px', padding: '10px 14px',
-        fontSize: '14px', fontFamily: 'Afacad, sans-serif', color: '#111',
-        width: '100%', outline: 'none',
+        width: '100%',
+        padding: '11px 14px',
+        borderRadius: '12px',
+        fontSize: '14px',
+        outline: 'none',
+        background: 'var(--surface-2)',
+        border: '1px solid var(--border)',
+        color: 'var(--text-primary)',
+        boxSizing: 'border-box',
+        fontFamily: 'inherit',
     }
 
-    if (registered) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="bg-white flex flex-col" style={{ width: '400px', borderRadius: '20px', padding: '36px', border: '1px solid #EBEBEB' }}>
-                    <div className="flex flex-col items-center mb-8">
-                        <button onClick={() => setPage('home')} className="flex items-center justify-center rounded-full mb-4" style={{ width: '56px', height: '56px', background: '#E8342A' }}>
-                            <img src="/src/assets/logo.png" alt="GameRent" style={{ width: '50px', height: '50px', objectFit: 'contain' }} />
-                        </button>
-                        <h1 className="font-bold text-gray-900" style={{ fontSize: '22px', fontFamily: 'Afacad, sans-serif' }}>Check your inbox</h1>
-                        <p className="text-gray-400 mt-1" style={{ fontSize: '13px', fontFamily: 'Afacad, sans-serif' }}>Almost there!</p>
-                    </div>
-                    <div className="flex flex-col items-center text-center">
-                        <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#EFF6FF', border: '1px solid #BFDBFE', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                <polyline points="22,6 12,13 2,6" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                        </div>
-                        <p style={{ fontFamily: 'Afacad, sans-serif', fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>We sent a verification link to</p>
-                        <p style={{ fontFamily: 'Afacad, sans-serif', fontSize: '14px', fontWeight: 700, color: '#111', marginBottom: '24px' }}>{registeredEmail}</p>
-                        <p style={{ fontFamily: 'Afacad, sans-serif', fontSize: '13px', color: '#9CA3AF', marginBottom: '24px' }}>
-                            Click the link in the email to activate your account before logging in.
-                        </p>
-                        <button onClick={() => { setRegistered(false); switchMode('login'); setUsername(''); setPassword(''); setEmail('') }}
-                                className="w-full font-bold transition-opacity hover:opacity-90"
-                                style={{ background: '#1A1A1A', borderRadius: '12px', padding: '12px', fontSize: '14px', fontFamily: 'Afacad, sans-serif', color: 'white', border: 'none', cursor: 'pointer', marginBottom: '12px' }}>
-                            Go to Sign In
-                        </button>
-                        <button onClick={() => setPage('home')} className="text-gray-400 hover:text-gray-600 transition-colors"
-                                style={{ fontSize: '13px', fontFamily: 'Afacad, sans-serif', background: 'none', border: 'none', cursor: 'pointer' }}>
-                            ← Back to home
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )
+    const labelStyle: React.CSSProperties = {
+        fontSize: '12px',
+        color: 'var(--text-muted)',
+        fontWeight: 600,
+        display: 'block',
+        marginBottom: '6px',
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-            <div className="bg-white flex flex-col" style={{ width: '400px', borderRadius: '20px', padding: '36px', border: '1px solid #EBEBEB' }}>
+        <div style={{
+            minHeight: '100vh',
+            background: 'var(--bg)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+        }}>
+            <div style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '24px',
+                padding: '40px',
+                width: '100%',
+                maxWidth: '420px',
+            }}>
+                {/* Logo */}
+                <button
+                    onClick={() => navigate('/')}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '28px', padding: 0, width: '100%' }}
+                >
+                    <img src={theme === 'light' ? '/logo-light.png' : '/logo-dark.png'} alt="Game Rent" style={{ height: '32px', objectFit: 'contain' }} />
+                </button>
 
-                <div className="flex flex-col items-center mb-8">
-                    <button onClick={() => setPage('home')} className="flex items-center justify-center rounded-full mb-4" style={{ width: '56px', height: '56px', background: '#E8342A' }}>
-                        <img src="/src/assets/logo.png" alt="GameRent" style={{ width: '50px', height: '50px', objectFit: 'contain' }} />
-                    </button>
-                    <h1 className="font-bold text-gray-900" style={{ fontSize: '22px', fontFamily: 'Afacad, sans-serif' }}>
-                        {mode === 'login' ? 'Welcome back' : mode === 'register' ? 'Create account' : 'Forgot password'}
-                    </h1>
-                    <p className="text-gray-400 mt-1" style={{ fontSize: '13px', fontFamily: 'Afacad, sans-serif' }}>
-                        {mode === 'login' ? 'Sign in to your GameRent account' : mode === 'register' ? 'Join GameRent today' : 'Enter your email to reset your password'}
-                    </p>
-                </div>
+                {/* Tab switcher */}
+                {!forgotOpen && <div style={{
+                    display: 'flex',
+                    background: 'var(--surface-2)',
+                    borderRadius: '999px',
+                    padding: '4px',
+                    marginBottom: '24px',
+                }}>
+                    {([['signin', 'Sign In'], ['register', 'Register']] as [Tab, string][]).map(([t, label]) => (
+                        <button
+                            key={t}
+                            onClick={() => switchTab(t)}
+                            style={{
+                                flex: 1,
+                                padding: '8px',
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                border: 'none',
+                                cursor: 'pointer',
+                                borderRadius: '999px',
+                                background: tab === t ? 'var(--surface)' : 'transparent',
+                                color: tab === t ? 'var(--text-primary)' : 'var(--text-muted)',
+                                boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
+                                fontFamily: 'inherit',
+                                transition: 'all 150ms ease',
+                            }}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>}
 
-                {mode !== 'forgot' && (
-                    <div className="flex mb-6" style={{ background: '#F5F5F5', borderRadius: '12px', padding: '4px' }}>
-                        {(['login', 'register'] as const).map(m => (
-                            <button key={m} onClick={() => switchMode(m)} className="flex-1 font-medium transition-all"
-                                    style={{ borderRadius: '10px', padding: '8px', fontSize: '13px', fontFamily: 'Afacad, sans-serif', background: mode === m ? 'white' : 'transparent', color: mode === m ? '#111' : '#999', boxShadow: mode === m ? '0 1px 4px rgba(0,0,0,0.08)' : 'none', border: 'none', cursor: 'pointer' }}>
-                                {m === 'login' ? 'Sign In' : 'Register'}
-                            </button>
-                        ))}
+                {/* Success message */}
+                {success && (
+                    <div style={{
+                        background: 'var(--surface-2)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '12px',
+                        padding: '12px 14px',
+                        marginBottom: '16px',
+                    }}>
+                        <p style={{ fontSize: '14px', color: 'var(--success)', fontWeight: 500 }}>{success}</p>
                     </div>
                 )}
 
-                {mode === 'forgot' && forgotSent ? (
-                    <div className="flex flex-col items-center text-center">
-                        <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#F0FDF4', border: '1px solid #BBF7D0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                <path d="M20 6L9 17L4 12" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                {/* Error message */}
+                {error && (
+                    <div style={{
+                        background: 'var(--surface-2)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '12px',
+                        padding: '12px 14px',
+                        marginBottom: '16px',
+                    }}>
+                        <p style={{ fontSize: '14px', color: 'var(--danger)', fontWeight: 500 }}>{error}</p>
+                    </div>
+                )}
+
+                {/* Forgot password — full replacement view */}
+                {tab === 'signin' && forgotOpen && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        <button
+                            onClick={() => { setForgotOpen(false); setForgotSuccess(''); setForgotEmail('') }}
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                fontSize: '13px', color: 'var(--text-muted)', fontFamily: 'inherit',
+                                padding: 0, alignSelf: 'flex-start',
+                            }}
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                             </svg>
-                        </div>
-                        <p style={{ fontFamily: 'Afacad, sans-serif', fontSize: '14px', color: '#374151', marginBottom: '8px', fontWeight: 600 }}>Check your inbox!</p>
-                        <p style={{ fontFamily: 'Afacad, sans-serif', fontSize: '13px', color: '#9CA3AF', marginBottom: '24px' }}>
-                            If this email is registered, you will receive a reset link shortly.
-                        </p>
-                        <button onClick={() => switchMode('login')} className="w-full font-bold transition-opacity hover:opacity-90"
-                                style={{ background: '#1A1A1A', borderRadius: '12px', padding: '12px', fontSize: '14px', fontFamily: 'Afacad, sans-serif', color: 'white', border: 'none', cursor: 'pointer' }}>
                             Back to Sign In
                         </button>
+
+                        {forgotSuccess ? (
+                            <div style={{
+                                background: 'var(--surface-2)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '12px',
+                                padding: '12px 14px',
+                            }}>
+                                <p style={{ fontSize: '14px', color: 'var(--success)', fontWeight: 500 }}>{forgotSuccess}</p>
+                            </div>
+                        ) : (
+                            <form onSubmit={forgot} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                <p style={{ fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>
+                                    Enter your email and we'll send you a reset link.
+                                </p>
+                                <div>
+                                    <label style={labelStyle}>Email</label>
+                                    <input
+                                        type="email"
+                                        value={forgotEmail}
+                                        onChange={e => setForgotEmail(e.target.value)}
+                                        placeholder="you@email.com"
+                                        required
+                                        autoFocus
+                                        style={inputStyle}
+                                        onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                                        onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={forgotLoading}
+                                    style={{
+                                        background: 'var(--accent)',
+                                        borderRadius: '999px',
+                                        padding: '13px',
+                                        width: '100%',
+                                        fontSize: '15px',
+                                        fontWeight: 600,
+                                        color: 'white',
+                                        border: 'none',
+                                        cursor: forgotLoading ? 'not-allowed' : 'pointer',
+                                        opacity: forgotLoading ? 0.6 : 1,
+                                        fontFamily: 'inherit',
+                                    }}
+                                >
+                                    {forgotLoading ? 'Sending...' : 'Send Reset Link'}
+                                </button>
+                            </form>
+                        )}
                     </div>
-                ) : (
-                    <>
-                        <div className="flex flex-col gap-3 mb-4">
-                            {mode !== 'forgot' && (
-                                <div>
-                                    <label className="text-gray-500 block mb-1" style={{ fontSize: '12px', fontFamily: 'Afacad, sans-serif' }}>Username</label>
-                                    <input type="text" value={username} onChange={e => setUsername(e.target.value)}
-                                           onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-                                           placeholder="Enter your username" style={inputStyle} />
-                                </div>
-                            )}
-                            {(mode === 'register' || mode === 'forgot') && (
-                                <div>
-                                    <label className="text-gray-500 block mb-1" style={{ fontSize: '12px', fontFamily: 'Afacad, sans-serif' }}>Email</label>
-                                    <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                                           onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-                                           placeholder="Enter your email" style={inputStyle} />
-                                </div>
-                            )}
-                            {mode !== 'forgot' && (
-                                <div>
-                                    <label className="text-gray-500 block mb-1" style={{ fontSize: '12px', fontFamily: 'Afacad, sans-serif' }}>Password</label>
-                                    <input type="password" value={password} onChange={e => handlePasswordChange(e.target.value)}
-                                           onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-                                           placeholder="Enter your password" style={inputStyle} />
-                                    {mode === 'register' && passwordHint && (
-                                        <p style={{ fontSize: '11px', color: '#F59E0B', marginTop: '5px', fontFamily: 'Afacad, sans-serif' }}>⚠ {passwordHint}</p>
-                                    )}
-                                    {mode === 'register' && password && !passwordHint && (
-                                        <p style={{ fontSize: '11px', color: '#22C55E', marginTop: '5px', fontFamily: 'Afacad, sans-serif' }}>✓ Strong password</p>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {mode === 'login' && (
-                            <button onClick={() => switchMode('forgot')} className="text-left mb-4 hover:underline"
-                                    style={{ fontSize: '12px', fontFamily: 'Afacad, sans-serif', color: '#3B6FE0', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                                Forgot your password?
-                            </button>
-                        )}
-
-                        {error && (
-                            <p className="text-red-500 mb-4 text-center" style={{ fontSize: '13px', fontFamily: 'Afacad, sans-serif' }}>{error}</p>
-                        )}
-
-                        <button onClick={handleSubmit} disabled={isLoading} className="w-full font-bold transition-opacity hover:opacity-90"
-                                style={{ background: '#1A1A1A', borderRadius: '12px', padding: '12px', fontSize: '14px', fontFamily: 'Afacad, sans-serif', color: 'white', opacity: isLoading ? 0.6 : 1, cursor: isLoading ? 'not-allowed' : 'pointer', border: 'none' }}>
-                            {isLoading ? 'Loading...' : mode === 'login' ? 'Sign In' : mode === 'register' ? 'Create Account' : 'Send Reset Link'}
-                        </button>
-
-                        {mode === 'forgot' && (
-                            <button onClick={() => switchMode('login')} className="mt-4 text-gray-400 hover:text-gray-600 transition-colors"
-                                    style={{ fontSize: '13px', fontFamily: 'Afacad, sans-serif', background: 'none', border: 'none', cursor: 'pointer' }}>
-                                ← Back to Sign In
-                            </button>
-                        )}
-                        {mode !== 'forgot' && (
-                            <button onClick={() => setPage('home')} className="mt-4 text-gray-400 hover:text-gray-600 transition-colors"
-                                    style={{ fontSize: '13px', fontFamily: 'Afacad, sans-serif', background: 'none', border: 'none', cursor: 'pointer' }}>
-                                ← Back to home
-                            </button>
-                        )}
-                    </>
                 )}
+
+                {/* Sign In */}
+                {tab === 'signin' && !forgotOpen && (
+                    <form onSubmit={signin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        <div>
+                            <label style={labelStyle}>Username or Email</label>
+                            <input
+                                value={username}
+                                onChange={e => setUsername(e.target.value)}
+                                style={inputStyle}
+                                placeholder="your_username"
+                                autoFocus
+                                required
+                                onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                                onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+                            />
+                        </div>
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                <label style={{ ...labelStyle, marginBottom: 0 }}>Password</label>
+                                <button
+                                    type="button"
+                                    onClick={() => { setForgotOpen(true); setForgotSuccess(''); setForgotEmail('') }}
+                                    style={{
+                                        background: 'none', border: 'none', cursor: 'pointer',
+                                        fontSize: '12px', color: 'var(--accent)', fontWeight: 500,
+                                        fontFamily: 'inherit', padding: 0,
+                                    }}
+                                >
+                                    Forgot password?
+                                </button>
+                            </div>
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type={showPw ? 'text' : 'password'}
+                                    value={password}
+                                    onChange={e => setPassword(e.target.value)}
+                                    style={{ ...inputStyle, paddingRight: '40px' }}
+                                    placeholder="••••••••"
+                                    required
+                                    onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                                    onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPw(v => !v)}
+                                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                        {showPw
+                                            ? <><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></>
+                                            : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/></>
+                                        }
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            style={{
+                                background: 'var(--accent)',
+                                borderRadius: '999px',
+                                padding: '13px',
+                                width: '100%',
+                                fontSize: '15px',
+                                fontWeight: 600,
+                                color: 'white',
+                                border: 'none',
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                opacity: loading ? 0.6 : 1,
+                                marginTop: '4px',
+                                fontFamily: 'inherit',
+                            }}
+                        >
+                            {loading ? 'Signing in...' : 'Sign In'}
+                        </button>
+                    </form>
+                )}
+
+                {/* Register */}
+                {tab === 'register' && (
+                    <form onSubmit={registerUser} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        {[
+                            { label: 'Username', value: username, setter: setUsername, placeholder: 'choose_username', type: 'text' },
+                            { label: 'Email', value: email, setter: setEmail, placeholder: 'you@email.com', type: 'email' },
+                        ].map(({ label, value, setter, placeholder, type }) => (
+                            <div key={label}>
+                                <label style={labelStyle}>{label}</label>
+                                <input
+                                    type={type}
+                                    value={value}
+                                    onChange={e => setter(e.target.value)}
+                                    placeholder={placeholder}
+                                    required
+                                    style={inputStyle}
+                                    onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                                    onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+                                />
+                            </div>
+                        ))}
+                        <div>
+                            <label style={labelStyle}>Password</label>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                                placeholder="••••••••"
+                                required
+                                style={inputStyle}
+                                onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                                onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+                            />
+                        </div>
+                        {/* Password hints */}
+                        {password.length > 0 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                {pwRules.map(({ label, test }) => (
+                                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: test(password) ? 'var(--success)' : 'var(--text-muted)', flexShrink: 0 }} />
+                                        <span style={{ fontSize: '11px', color: test(password) ? 'var(--success)' : 'var(--text-muted)' }}>{label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            style={{
+                                background: 'var(--accent)',
+                                borderRadius: '999px',
+                                padding: '13px',
+                                width: '100%',
+                                fontSize: '15px',
+                                fontWeight: 600,
+                                color: 'white',
+                                border: 'none',
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                opacity: loading ? 0.6 : 1,
+                                marginTop: '4px',
+                                fontFamily: 'inherit',
+                            }}
+                        >
+                            {loading ? 'Creating account...' : 'Create Account'}
+                        </button>
+                    </form>
+                )}
+
             </div>
         </div>
     )
