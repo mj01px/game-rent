@@ -1,452 +1,643 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { useApp } from '../../context/AppContext'
-import { Game } from '../../types'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
+import type { Game } from '../../types'
 import api from '../../services/api'
+import Stars from '../../components/ui/Stars'
 
-interface AdminPortalProps {
-    setPage: (p: string) => void
-}
+type AdminTab = 'overview' | 'games' | 'users' | 'refunds'
+type RefundFilter = 'pending' | 'approved' | 'rejected' | 'all'
 
-interface AdminUser {
-    id: number; username: string; email: string; is_staff: boolean
-    is_active: boolean; is_verified: boolean; date_joined: string
-    avatar: string | null; rental_count: number
-}
-interface AdminRefund {
-    id: number; rental_id: number; username: string; user_email: string
-    user_avatar?: string | null; game_name: string; game_image: string | null
-    total_paid: string; reason: string; status: string
-    requested_at: string; resolved_at: string | null; resolved_by: string | null
-    hours_rented?: number; days_left?: number
-}
+const PLATFORMS = ['pc', 'playstation', 'ps5', 'xbox', 'switch']
+const GENRES_LIST = ['Action', 'Adventure', 'RPG', 'FPS', 'Sports', 'Horror', 'Racing', 'Platform', 'Simulation', 'Multiplayer']
+const emptyForm = { name: '', description: '', platform: 'pc', original_price: '', rental_price: '', rating: '', publisher: '', release_date: '', genre: [] as string[], is_featured: false, is_new: false }
 
-const PLATFORMS = [
-    { value:'pc', label:'PC' }, { value:'ps5', label:'PlayStation 5' },
-    { value:'ps4', label:'PlayStation 4' }, { value:'xbox_series', label:'Xbox Series X/S' },
-    { value:'xbox_one', label:'Xbox One' }, { value:'nintendo_switch', label:'Nintendo Switch' },
-    { value:'mobile', label:'Mobile' },
-]
-const GENRE_OPTIONS = ['Action','Adventure','RPG','FPS','Simulation','Sports','Roguelike','Party','Horror','Puzzle','Strategy','Racing']
-const EMPTY_FORM = {
-    name:'', description:'', platform:'pc', original_price:'', rental_price:'',
-    rating:'', release_date:'', genre:[] as string[], is_featured:false, is_new:false,
-    publisher_name:'', keys_to_add:1,
-}
+// ── Shared styles ────────────────────────────────────────────────
+const inputCls: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: '10px', fontSize: '13px', outline: 'none', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: 'inherit', boxSizing: 'border-box' }
+const labelCls: React.CSSProperties = { fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '5px' }
 
-const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' })
-const fmtDT = (d: string) => new Date(d).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' })
-const hoursRented = (started: string) => Math.max(0, Math.floor((Date.now() - new Date(started).getTime()) / 3600000))
-const daysLeft = (expires: string) => Math.max(0, Math.ceil((new Date(expires).getTime() - Date.now()) / 86400000))
-
-const Badge = ({ s }: { s: string }) => {
-    const m: Record<string, [string,string]> = {
-        active:['#D1FAE5','#059669'], pending:['#FEF3C7','#D97706'],
-        expired:['#F3F4F6','#6B7280'], approved:['#D1FAE5','#059669'], rejected:['#FEE2E2','#DC2626'],
+function StatusPill({ status }: { status: string }) {
+    const map: Record<string, { bg: string; color: string }> = {
+        pending:  { bg: 'rgba(251,188,4,0.12)',  color: '#B8860B' },
+        approved: { bg: 'rgba(30,142,62,0.10)',  color: 'var(--success)' },
+        rejected: { bg: 'rgba(217,48,37,0.10)',  color: 'var(--danger)' },
     }
-    const [bg, color] = m[s] || ['#F3F4F6','#6B7280']
-    return <span style={{ fontSize:'11px', fontFamily:'Afacad, sans-serif', fontWeight:700, background:bg, color, borderRadius:'6px', padding:'3px 8px' }}>{s.charAt(0).toUpperCase()+s.slice(1)}</span>
+    const s = map[status] ?? { bg: 'var(--surface-2)', color: 'var(--text-muted)' }
+    return (
+        <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, background: s.bg, color: s.color, textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+            {status}
+        </span>
+    )
 }
 
-const Av = ({ src, name, size=32 }: { src?: string|null, name:string, size?:number }) => (
-    src ? <img src={src} alt={name} style={{ width:size, height:size, borderRadius:'50%', objectFit:'cover', flexShrink:0 }} />
-        : <div style={{ width:size, height:size, borderRadius:'50%', background:'#3B6FE0', display:'flex', alignItems:'center', justifyContent:'center', fontSize:size*0.38, color:'white', fontFamily:'Afacad, sans-serif', fontWeight:700, flexShrink:0 }}>{name.slice(0,2).toUpperCase()}</div>
-)
+export default function AdminPortal() {
+    const navigate = useNavigate()
+    const { user, isAuthenticated } = useAuth()
 
-const inputSt: React.CSSProperties = { width:'100%', border:'1px solid #E0E0E0', borderRadius:'10px', padding:'9px 12px', fontSize:'13px', fontFamily:'Afacad, sans-serif', color:'#1A1A1A', outline:'none', background:'white' }
-const labelSt: React.CSSProperties = { fontSize:'11px', fontFamily:'Afacad, sans-serif', color:'#9CA3AF', marginBottom:'4px', display:'block', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }
-const cardSt: React.CSSProperties = { background:'white', borderRadius:'16px', border:'1px solid #EBEBEB' }
-const thSt: React.CSSProperties = { fontSize:'11px', fontFamily:'Afacad, sans-serif', color:'#9CA3AF', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em', padding:'10px 14px' }
-
-export default function AdminPortal({ setPage }: AdminPortalProps) {
-    const { user, isAuthenticated } = useApp()
-    const [tab, setTab] = useState<'games'|'users'|'refunds'>('games')
-
-    // Games
-    const [games, setGames] = useState<Game[]>([])
-    const [gLoading, setGLoading] = useState(true)
+    const [tab, setTab] = useState<AdminTab>('overview')
+    const [games, setGames]   = useState<Game[]>([])
+    const [users, setUsers]   = useState<any[]>([])
+    const [refunds, setRefunds] = useState<any[]>([])
+    const [refundFilter, setRefundFilter] = useState<RefundFilter>('pending')
+    const [loading, setLoading] = useState(false)
     const [gSearch, setGSearch] = useState('')
-    const [showModal, setShowModal] = useState(false)
-    const [editingGame, setEditingGame] = useState<Game|null>(null)
-    const [form, setForm] = useState<typeof EMPTY_FORM>(EMPTY_FORM)
-    const [saving, setSaving] = useState(false)
-    const [saveError, setSaveError] = useState('')
-    const [delConfirm, setDelConfirm] = useState<number|null>(null)
-    const [imgFile, setImgFile] = useState<File|null>(null)
-    const [imgPreview, setImgPreview] = useState<string|null>(null)
-    const fileRef = useRef<HTMLInputElement>(null)
-
-    // Users
-    const [users, setUsers] = useState<AdminUser[]>([])
-    const [uLoading, setULoading] = useState(false)
     const [uSearch, setUSearch] = useState('')
-    const [sendingReset, setSendingReset] = useState<number|null>(null)
-    const [resetSent, setResetSent] = useState<number|null>(null)
-    const [expandedUser, setExpandedUser] = useState<number|null>(null)
+    const [expandedUser, setExpandedUser] = useState<number | null>(null)
+    const [resetSent, setResetSent] = useState<number | null>(null)
+    const [showModal, setShowModal] = useState(false)
+    const [editGame, setEditGame] = useState<Game | null>(null)
+    const [form, setForm] = useState(emptyForm)
+    const [imageFile, setImageFile] = useState<File | null>(null)
+    const [saving, setSaving] = useState(false)
+    const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
+    const imgRef = useRef<HTMLInputElement>(null)
 
-    // Refunds
-    const [refunds, setRefunds] = useState<AdminRefund[]>([])
-    const [rfLoading, setRfLoading] = useState(false)
-    const [rfFilter, setRfFilter] = useState('pending')
-    const [actioning, setActioning] = useState<number|null>(null)
+    if (!isAuthenticated || !user?.is_staff) { navigate('/'); return null }
 
-    useEffect(() => { if (!isAuthenticated || !user?.is_staff) setPage('home') }, [isAuthenticated, user])
-
-    // Carrega tudo na inicialização para ter os counts corretos nas tabs
+    // fetch all on mount for overview stats
     useEffect(() => {
-        loadGames()
-        loadUsers()
-        loadRefunds()
+        fetchGames(); fetchUsers(); fetchRefunds()
     }, [])
 
-    // Recarrega quando muda de tab (para refresh dos dados)
     useEffect(() => {
-        if (tab==='games') loadGames()
-        if (tab==='users') loadUsers()
-        if (tab==='refunds') loadRefunds()
+        if (tab === 'games') fetchGames()
+        else if (tab === 'users') fetchUsers()
+        else if (tab === 'refunds') fetchRefunds()
     }, [tab])
 
-    const loadGames = async () => { setGLoading(true); try { const { data } = await api.get('/games/'); setGames(data) } catch {} finally { setGLoading(false) } }
-    const loadUsers = async () => { setULoading(true); try { const { data } = await api.get('/rentals/admin/users/'); setUsers(data) } catch {} finally { setULoading(false) } }
-    const loadRefunds = async () => { setRfLoading(true); try { const { data } = await api.get('/rentals/admin/refunds/'); setRefunds(data) } catch {} finally { setRfLoading(false) } }
+    const fetchGames   = () => { setLoading(true); api.get('/games/', { params: { page_size: 100 } }).then(({ data }) => setGames(data.data ?? data)).finally(() => setLoading(false)) }
+    const fetchUsers   = () => api.get('/rentals/admin/users/').then(({ data }) => setUsers(data.data ?? data))
+    const fetchRefunds = () => api.get('/rentals/admin/refunds/').then(({ data }) => setRefunds(data.data ?? data))
 
-    const openCreate = () => { setEditingGame(null); setForm(EMPTY_FORM); setImgFile(null); setImgPreview(null); setSaveError(''); setShowModal(true) }
+    const pendingCount   = refunds.filter(r => r.status === 'pending').length
+    const availableKeys  = games.reduce((s, g) => s + (g.available_keys || 0), 0)
+    const outOfStock     = games.filter(g => g.available_keys === 0).length
+
+    const openCreate = () => { setEditGame(null); setForm(emptyForm); setImageFile(null); setShowModal(true) }
     const openEdit = (g: Game) => {
-        setEditingGame(g)
-        setForm({ name:g.name, description:g.description, platform:g.platform, original_price:g.original_price, rental_price:g.rental_price, rating:g.rating, release_date:g.release_date||'', genre:g.genre||[], is_featured:g.is_featured, is_new:g.is_new, publisher_name:g.publisher?.name||'', keys_to_add:0 })
-        setImgFile(null); setImgPreview(g.image||null); setSaveError(''); setShowModal(true)
+        setEditGame(g)
+        setForm({ name: g.name, description: g.description, platform: g.platform, original_price: g.original_price, rental_price: g.rental_price, rating: g.rating, publisher: g.publisher?.name || '', release_date: g.release_date || '', genre: g.genre || [], is_featured: g.is_featured, is_new: g.is_new })
+        setImageFile(null); setShowModal(true)
     }
-    const handleImgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]; if (!file) return
-        setImgFile(file)
-        const r = new FileReader(); r.onload = ev => setImgPreview(ev.target?.result as string); r.readAsDataURL(file)
-    }
-    const toggleGenre = (g: string) => setForm(p => ({ ...p, genre: p.genre.includes(g) ? p.genre.filter(x=>x!==g) : [...p.genre, g] }))
-    const handleSave = async () => {
-        setSaving(true); setSaveError('')
+    const saveGame = async () => {
+        setSaving(true)
+        const fd = new FormData()
+        Object.entries(form).forEach(([k, v]) => { if (k === 'genre') fd.append(k, JSON.stringify(v)); else fd.append(k, String(v)) })
+        if (imageFile) fd.append('image', imageFile)
         try {
-            const fd = new FormData()
-            Object.entries(form).forEach(([k,v]) => fd.append(k, k==='genre' ? JSON.stringify(v) : String(v)))
-            if (imgFile) fd.append('image', imgFile)
-            if (editingGame) await api.patch(`/games/admin/${editingGame.id}/`, fd, { headers:{'Content-Type':'multipart/form-data'} })
-            else await api.post('/games/admin/create/', fd, { headers:{'Content-Type':'multipart/form-data'} })
-            setShowModal(false); loadGames()
-        } catch (e: any) { setSaveError(e?.response?.data?.error || JSON.stringify(e?.response?.data) || 'Error saving.') }
+            if (editGame) await api.patch(`/games/admin/${editGame.id}/`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+            else await api.post('/games/admin/create/', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+            setShowModal(false); fetchGames()
+        } catch (e: any) { alert(e?.response?.data?.error || 'Save failed.') }
         finally { setSaving(false) }
     }
-    const handleDelete = async (id: number) => { try { await api.delete(`/games/admin/${id}/`); setDelConfirm(null); loadGames() } catch {} }
-
+    const deleteGame = async (id: number) => {
+        try { await api.delete(`/games/admin/${id}/`); fetchGames() } catch { alert('Delete failed.') }
+        finally { setDeleteConfirm(null) }
+    }
+    const resolveRefund = async (id: number, action: 'approve' | 'reject') => {
+        try { await api.post(`/rentals/admin/refunds/${id}/action/`, { action }); fetchRefunds() } catch { alert('Action failed.') }
+    }
     const sendReset = async (userId: number) => {
-        setSendingReset(userId)
-        try { await api.post(`/rentals/admin/users/${userId}/send-reset/`); setResetSent(userId); setTimeout(()=>setResetSent(null), 3000) }
-        catch {} finally { setSendingReset(null) }
+        try { await api.post(`/rentals/admin/users/${userId}/send-reset/`); setResetSent(userId); setTimeout(() => setResetSent(null), 3000) } catch { alert('Failed to send.') }
     }
 
-    const handleRefundAction = async (id: number, action: 'approve'|'reject') => {
-        setActioning(id)
-        try { await api.post(`/rentals/admin/refunds/${id}/action/`, { action }); loadRefunds() }
-        catch {} finally { setActioning(null) }
-    }
+    const filteredGames   = games.filter(g => g.name.toLowerCase().includes(gSearch.toLowerCase()))
+    const filteredUsers   = users.filter(u => u.username?.toLowerCase().includes(uSearch.toLowerCase()) || u.email?.toLowerCase().includes(uSearch.toLowerCase()))
+    const filteredRefunds = refunds.filter(r => refundFilter === 'all' || r.status === refundFilter)
 
-    const filteredGames = games.filter(g => g.name.toLowerCase().includes(gSearch.toLowerCase()))
-    const filteredUsers = users.filter(u => u.username.toLowerCase().includes(uSearch.toLowerCase()) || u.email.toLowerCase().includes(uSearch.toLowerCase()))
-    const filteredRefunds = refunds.filter(r => rfFilter==='all' || r.status===rfFilter)
-    const pendingCount = refunds.filter(r => r.status==='pending').length
-
-    const tabs = [
-        { key:'games', label:'Games', count:games.length },
-        { key:'users', label:'Users', count:users.length },
-        { key:'refunds', label:'Refunds', count:pendingCount, alert:pendingCount>0 },
+    const TABS: { id: AdminTab; label: string; icon: React.ReactNode; badge?: number }[] = [
+        { id: 'overview', label: 'Overview', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/></svg> },
+        { id: 'games',    label: 'Games',    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="3" stroke="currentColor" strokeWidth="1.8"/><path d="M8 12H10M9 11V13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><circle cx="15" cy="12" r="1.3" fill="currentColor"/><circle cx="17" cy="10" r="1.3" fill="currentColor"/></svg>, badge: games.length },
+        { id: 'users',    label: 'Users',    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M2 21c0-4 3.13-7 7-7s7 3 7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M19 11v6M22 14h-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>, badge: users.length },
+        { id: 'refunds',  label: 'Refunds',  icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 109 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M3 12V6M3 12H9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>, badge: pendingCount },
     ]
 
     return (
-        <div style={{ maxWidth:'1200px', margin:'0 auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
 
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                    <button onClick={() => setPage('home')} style={{ background:'none', border:'none', cursor:'pointer', color:'#9CA3AF', display:'flex', alignItems:'center', gap:'6px', fontSize:'14px', fontFamily:'Afacad, sans-serif' }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                        Back
-                    </button>
-                    <span style={{ color:'#E0E0E0' }}>/</span>
-                    <div>
-                        <h1 style={{ fontSize:'20px', fontFamily:'Afacad, sans-serif', fontWeight:700, color:'#1A1A1A' }}>Admin Portal</h1>
-                        <p style={{ fontSize:'12px', fontFamily:'Afacad, sans-serif', color:'#9CA3AF' }}>Logged as {user?.username}</p>
-                    </div>
+            {/* ── Page header ──────────────────────────────────────── */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                    <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Admin Portal</h1>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '3px' }}>Manage games, users and refund requests</p>
                 </div>
-                {tab==='games' && (
-                    <button onClick={openCreate} style={{ background:'#1A1A1A', color:'white', borderRadius:'12px', padding:'10px 20px', fontSize:'14px', fontFamily:'Afacad, sans-serif', fontWeight:600, border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:'8px' }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></svg>
-                        Add Game
-                    </button>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)' }} />
+                    Logged as <strong style={{ color: 'var(--text-primary)' }}>{user?.username}</strong>
+                </div>
             </div>
 
-            {/* Tabs */}
-            <div style={{ background:'white', borderRadius:'14px', border:'1px solid #EBEBEB', padding:'4px', display:'inline-flex', gap:'2px', marginBottom:'20px' }}>
-                {tabs.map(t => (
-                    <button key={t.key} onClick={() => setTab(t.key as any)}
-                            style={{ padding:'8px 18px', borderRadius:'10px', fontSize:'14px', fontFamily:'Afacad, sans-serif', fontWeight:tab===t.key?700:500, border:'none', cursor:'pointer', background:tab===t.key?'#1A1A1A':'transparent', color:tab===t.key?'white':'#6B7280', display:'flex', alignItems:'center', gap:'6px', transition:'all 0.15s' }}>
-                        {t.label}
-                        <span style={{ fontSize:'11px', fontWeight:700, background:(t as any).alert?'#EF4444':(tab===t.key?'rgba(255,255,255,0.2)':'#F3F4F6'), color:(t as any).alert?'white':(tab===t.key?'white':'#9CA3AF'), borderRadius:'20px', padding:'1px 7px', minWidth:'22px', textAlign:'center' }}>
-                            {t.count}
-                        </span>
-                    </button>
-                ))}
+            {/* ── Tab bar ──────────────────────────────────────────── */}
+            <div style={{ display: 'flex', gap: '4px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '4px' }}>
+                {TABS.map(({ id, label, icon, badge }) => {
+                    const active = tab === id
+                    return (
+                        <button key={id} onClick={() => setTab(id)} style={{
+                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
+                            padding: '9px 12px', fontSize: '13px', fontWeight: 600, border: 'none', cursor: 'pointer',
+                            borderRadius: '10px', fontFamily: 'inherit', position: 'relative',
+                            background: active ? 'var(--accent)' : 'transparent',
+                            color: active ? 'white' : 'var(--text-secondary)',
+                            transition: 'all 150ms ease',
+                        }}>
+                            {icon}
+                            {label}
+                            {badge !== undefined && badge > 0 && !active && (
+                                <span style={{
+                                    minWidth: '18px', height: '18px', borderRadius: '999px', padding: '0 4px',
+                                    background: id === 'refunds' ? 'var(--danger)' : 'var(--accent)',
+                                    color: 'white', fontSize: '10px', fontWeight: 700,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                    {badge > 99 ? '99+' : badge}
+                                </span>
+                            )}
+                        </button>
+                    )
+                })}
             </div>
 
-            {/* ══ GAMES ══ */}
-            {tab==='games' && (
-                <div>
-                    <div className="relative mb-4">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'#9CA3AF' }}><circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                        <input type="text" placeholder="Search games..." value={gSearch} onChange={e => setGSearch(e.target.value)} style={{ ...inputSt, paddingLeft:'34px' }} />
-                    </div>
-                    <div style={cardSt}>
-                        <div style={{ display:'grid', gridTemplateColumns:'56px 1fr 130px 100px 80px 70px 90px 110px', borderBottom:'1px solid #F5F5F5', background:'#FAFAFA', borderRadius:'16px 16px 0 0' }}>
-                            {['','Game','Platform','Rent/wk','Rating','Keys','Status','Actions'].map(h => <span key={h} style={thSt}>{h}</span>)}
-                        </div>
-                        {gLoading ? <div style={{ padding:'48px', textAlign:'center' }}><p style={{ color:'#9CA3AF', fontFamily:'Afacad, sans-serif', fontSize:'14px' }}>Loading...</p></div>
-                            : filteredGames.map((game, i) => (
-                                <div key={game.id} style={{ display:'grid', gridTemplateColumns:'56px 1fr 130px 100px 80px 70px 90px 110px', padding:'10px 0', borderBottom:i<filteredGames.length-1?'1px solid #F9F9F9':'none', alignItems:'center' }}>
-                                    <div style={{ padding:'0 14px' }}>
-                                        <img src={game.image} alt={game.name} style={{ width:'38px', height:'30px', borderRadius:'6px', objectFit:'cover' }} onError={e => { (e.target as HTMLImageElement).src=`https://picsum.photos/seed/${game.id}/80/60` }} />
-                                    </div>
-                                    <div style={{ padding:'0 14px', minWidth:0 }}>
-                                        <p style={{ fontSize:'13px', fontFamily:'Afacad, sans-serif', fontWeight:600, color:'#1A1A1A', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{game.name}</p>
-                                        <p style={{ fontSize:'11px', fontFamily:'Afacad, sans-serif', color:'#9CA3AF' }}>{game.publisher?.name||'—'}</p>
-                                    </div>
-                                    <span style={{ padding:'0 14px', fontSize:'12px', fontFamily:'Afacad, sans-serif', color:'#6B7280' }}>{game.platform_display}</span>
-                                    <span style={{ padding:'0 14px', fontSize:'13px', fontFamily:'Afacad, sans-serif', fontWeight:700, color:'#1A1A1A' }}>${parseFloat(game.rental_price).toFixed(2)}</span>
-                                    <span style={{ padding:'0 14px', fontSize:'13px', fontFamily:'Afacad, sans-serif', color:'#F59E0B', fontWeight:700 }}>★ {parseFloat(game.rating).toFixed(1)}</span>
-                                    <span style={{ padding:'0 14px', fontSize:'13px', fontFamily:'Afacad, sans-serif', color:game.available_keys===0?'#EF4444':'#22C55E', fontWeight:700 }}>{game.available_keys}</span>
-                                    <div style={{ padding:'0 14px', display:'flex', gap:'4px', flexWrap:'wrap' }}>
-                                        {game.is_featured && <span style={{ fontSize:'10px', background:'#FEF3C7', color:'#D97706', borderRadius:'6px', padding:'2px 6px', fontWeight:700, fontFamily:'Afacad, sans-serif' }}>★</span>}
-                                        {game.is_new && <span style={{ fontSize:'10px', background:'#D1FAE5', color:'#059669', borderRadius:'6px', padding:'2px 6px', fontWeight:700, fontFamily:'Afacad, sans-serif' }}>NEW</span>}
-                                    </div>
-                                    <div style={{ padding:'0 14px', display:'flex', gap:'6px' }}>
-                                        <button onClick={() => openEdit(game)} style={{ padding:'5px 12px', borderRadius:'8px', border:'1px solid #E0E0E0', background:'white', cursor:'pointer', fontSize:'12px', fontFamily:'Afacad, sans-serif', color:'#374151' }} onMouseEnter={e=>e.currentTarget.style.background='#F9FAFB'} onMouseLeave={e=>e.currentTarget.style.background='white'}>Edit</button>
-                                        {delConfirm===game.id
-                                            ? <button onClick={() => handleDelete(game.id)} style={{ padding:'5px 12px', borderRadius:'8px', border:'none', background:'#EF4444', cursor:'pointer', fontSize:'12px', fontFamily:'Afacad, sans-serif', color:'white' }}>Sure?</button>
-                                            : <button onClick={() => setDelConfirm(game.id)} style={{ padding:'5px 12px', borderRadius:'8px', border:'1px solid #FEE2E2', background:'white', cursor:'pointer', fontSize:'12px', fontFamily:'Afacad, sans-serif', color:'#EF4444' }} onMouseEnter={e=>e.currentTarget.style.background='#FEF2F2'} onMouseLeave={e=>e.currentTarget.style.background='white'}>Del</button>
-                                        }
+            {/* ══════════════════════════════════════════════════════
+                OVERVIEW TAB
+            ══════════════════════════════════════════════════════ */}
+            {tab === 'overview' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    {/* KPI cards */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                        {[
+                            { label: 'Total Games', value: games.length, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="3" stroke="var(--accent)" strokeWidth="1.8"/><path d="M8 12H10M9 11V13" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round"/><circle cx="15" cy="12" r="1.3" fill="var(--accent)"/><circle cx="17" cy="10" r="1.3" fill="var(--accent)"/></svg>, accent: 'var(--accent)', bg: 'var(--accent-light)' },
+                            { label: 'Total Users', value: users.length, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="var(--success)" strokeWidth="1.8"/><path d="M4 20c0-4 3.58-7 8-7s8 3 8 7" stroke="var(--success)" strokeWidth="1.8" strokeLinecap="round"/></svg>, accent: 'var(--success)', bg: 'rgba(30,142,62,0.08)' },
+                            { label: 'Pending Refunds', value: pendingCount, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 109 9" stroke="var(--danger)" strokeWidth="1.8" strokeLinecap="round"/><path d="M3 12V6M3 12H9" stroke="var(--danger)" strokeWidth="1.8" strokeLinecap="round"/></svg>, accent: 'var(--danger)', bg: 'rgba(217,48,37,0.08)' },
+                            { label: 'Available Keys', value: availableKeys, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.78 7.78 5.5 5.5 0 017.78-7.78zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" stroke="#B8860B" strokeWidth="1.8" strokeLinecap="round"/></svg>, accent: '#B8860B', bg: 'rgba(251,188,4,0.10)' },
+                        ].map(({ label, value, icon, accent, bg }) => (
+                            <div key={label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                                    <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
+                                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        {icon}
                                     </div>
                                 </div>
-                            ))}
-                    </div>
-                </div>
-            )}
-
-            {/* ══ USERS ══ */}
-            {tab==='users' && (
-                <div>
-                    <div className="relative mb-4">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'#9CA3AF' }}><circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                        <input type="text" placeholder="Search users..." value={uSearch} onChange={e => setUSearch(e.target.value)} style={{ ...inputSt, paddingLeft:'34px' }} />
-                    </div>
-                    <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
-                        {uLoading ? <div style={{ ...cardSt, padding:'48px', textAlign:'center' }}><p style={{ color:'#9CA3AF', fontFamily:'Afacad, sans-serif' }}>Loading...</p></div>
-                            : filteredUsers.map(u => (
-                                <div key={u.id} style={cardSt}>
-                                    <div className="flex items-center gap-4" style={{ padding:'16px 20px', cursor:'pointer' }} onClick={() => setExpandedUser(expandedUser===u.id ? null : u.id)}>
-                                        <Av src={u.avatar} name={u.username} size={40} />
-                                        <div style={{ flex:1 }}>
-                                            <div className="flex items-center gap-2">
-                                                <p style={{ fontSize:'14px', fontFamily:'Afacad, sans-serif', fontWeight:700, color:'#1A1A1A' }}>{u.username}</p>
-                                                {u.is_staff && <span style={{ fontSize:'10px', background:'#EDE9FE', color:'#7C3AED', borderRadius:'6px', padding:'2px 7px', fontWeight:700, fontFamily:'Afacad, sans-serif' }}>ADMIN</span>}
-                                                {!u.is_verified && <span style={{ fontSize:'10px', background:'#FEF3C7', color:'#D97706', borderRadius:'6px', padding:'2px 7px', fontWeight:700, fontFamily:'Afacad, sans-serif' }}>UNVERIFIED</span>}
-                                            </div>
-                                            <p style={{ fontSize:'12px', fontFamily:'Afacad, sans-serif', color:'#9CA3AF' }}>{u.email}</p>
-                                        </div>
-                                        <div className="flex items-center gap-6" style={{ flexShrink:0 }}>
-                                            <div style={{ textAlign:'right' }}>
-                                                <p style={{ fontSize:'13px', fontFamily:'Afacad, sans-serif', fontWeight:700, color:'#1A1A1A' }}>{u.rental_count}</p>
-                                                <p style={{ fontSize:'11px', fontFamily:'Afacad, sans-serif', color:'#9CA3AF' }}>rentals</p>
-                                            </div>
-                                            <div style={{ textAlign:'right' }}>
-                                                <p style={{ fontSize:'11px', fontFamily:'Afacad, sans-serif', color:'#9CA3AF' }}>Joined</p>
-                                                <p style={{ fontSize:'12px', fontFamily:'Afacad, sans-serif', color:'#374151' }}>{fmtDate(u.date_joined)}</p>
-                                            </div>
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ color:'#9CA3AF', transition:'transform 0.2s', transform:expandedUser===u.id?'rotate(180deg)':'rotate(0)' }}><path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                                        </div>
-                                    </div>
-                                    {expandedUser===u.id && (
-                                        <div style={{ padding:'16px 20px', borderTop:'1px solid #F5F5F5', background:'#FAFAFA', borderRadius:'0 0 16px 16px' }}>
-                                            <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'16px', marginBottom:'16px' }}>
-                                                <div><p style={labelSt}>User ID</p><p style={{ fontSize:'13px', fontFamily:'Afacad, sans-serif', color:'#1A1A1A', fontWeight:600 }}>#{u.id}</p></div>
-                                                <div><p style={labelSt}>Account</p><Badge s={u.is_active ? 'active' : 'expired'} /></div>
-                                                <div><p style={labelSt}>Email</p><Badge s={u.is_verified ? 'approved' : 'pending'} /></div>
-                                                <div><p style={labelSt}>Role</p><Badge s={u.is_staff ? 'active' : 'expired'} /></div>
-                                            </div>
-                                            <div style={{ display:'flex', gap:'12px', alignItems:'center', padding:'12px 16px', background:'white', borderRadius:'12px', border:'1px solid #EBEBEB' }}>
-                                                <div style={{ flex:1 }}>
-                                                    <p style={{ fontSize:'13px', fontFamily:'Afacad, sans-serif', fontWeight:600, color:'#1A1A1A' }}>Send Password Reset</p>
-                                                    <p style={{ fontSize:'12px', fontFamily:'Afacad, sans-serif', color:'#9CA3AF' }}>Email a reset link to {u.email}</p>
-                                                </div>
-                                                {resetSent===u.id ? (
-                                                    <span style={{ fontSize:'13px', color:'#22C55E', fontFamily:'Afacad, sans-serif', fontWeight:600, flexShrink:0 }}>✓ Reset link sent!</span>
-                                                ) : (
-                                                    <button onClick={() => sendReset(u.id)} disabled={sendingReset===u.id}
-                                                            style={{ padding:'8px 18px', borderRadius:'10px', border:'1px solid #E0E0E0', background:'white', cursor:'pointer', fontSize:'13px', fontFamily:'Afacad, sans-serif', fontWeight:600, color:'#374151', opacity:sendingReset===u.id?0.5:1, flexShrink:0 }}
-                                                            onMouseEnter={e=>e.currentTarget.style.background='#F9FAFB'} onMouseLeave={e=>e.currentTarget.style.background='white'}>
-                                                        {sendingReset===u.id ? 'Sending...' : 'Send Reset Email'}
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                    </div>
-                </div>
-            )}
-
-            {/* ══ REFUNDS ══ */}
-            {tab==='refunds' && (
-                <div>
-                    <div className="flex gap-2 mb-4">
-                        {['pending','approved','rejected','all'].map(f => (
-                            <button key={f} onClick={() => setRfFilter(f)}
-                                    style={{ padding:'6px 16px', borderRadius:'20px', fontSize:'13px', fontFamily:'Afacad, sans-serif', fontWeight:rfFilter===f?700:500, border:rfFilter===f?'none':'1px solid #E0E0E0', background:rfFilter===f?'#1A1A1A':'white', color:rfFilter===f?'white':'#6B7280', cursor:'pointer', display:'flex', alignItems:'center', gap:'6px' }}>
-                                {f.charAt(0).toUpperCase()+f.slice(1)}
-                                {f==='pending' && pendingCount>0 && <span style={{ background:'#EF4444', color:'white', borderRadius:'10px', padding:'0 6px', fontSize:'10px', fontWeight:700 }}>{pendingCount}</span>}
-                            </button>
+                                <p style={{ fontSize: '32px', fontWeight: 700, color: accent, lineHeight: 1 }}>{value}</p>
+                            </div>
                         ))}
                     </div>
 
-                    {rfLoading ? <div style={{ ...cardSt, padding:'48px', textAlign:'center' }}><p style={{ color:'#9CA3AF', fontFamily:'Afacad, sans-serif' }}>Loading...</p></div>
-                        : filteredRefunds.length===0 ? (
-                            <div style={{ ...cardSt, padding:'56px', textAlign:'center' }}>
-                                <p style={{ fontSize:'32px', marginBottom:'12px' }}></p>
-                                <p style={{ color:'#9CA3AF', fontFamily:'Afacad, sans-serif', fontWeight:600, fontSize:'14px' }}>No {rfFilter==='all' ? '' : rfFilter} refund requests.</p>
-                            </div>
-                        ) : (
-                            <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
-                                {filteredRefunds.map(rf => (
-                                    <div key={rf.id} style={{ ...cardSt, padding:'20px 24px' }}>
-                                        <div className="flex items-start gap-4">
-                                            {/* Game image */}
-                                            {rf.game_image
-                                                ? <img src={rf.game_image} alt={rf.game_name} style={{ width:'72px', height:'54px', borderRadius:'10px', objectFit:'cover', flexShrink:0 }} />
-                                                : <div style={{ width:'72px', height:'54px', borderRadius:'10px', background:'#F3F4F6', flexShrink:0 }} />
-                                            }
-
-                                            {/* Main info */}
-                                            <div style={{ flex:1, minWidth:0 }}>
-                                                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                    <p style={{ fontSize:'15px', fontFamily:'Afacad, sans-serif', fontWeight:700, color:'#1A1A1A' }}>{rf.game_name}</p>
-                                                    <Badge s={rf.status} />
-                                                </div>
-
-                                                {/* Stats row */}
-                                                <div style={{ display:'flex', gap:'16px', marginBottom:'10px', flexWrap:'wrap' }}>
-                                                    {[
-                                                        { label:'User', value: rf.username },
-                                                        { label:'Email', value: rf.user_email },
-                                                        { label:'Amount Paid', value: `$${rf.total_paid}` },
-                                                        { label:'Requested', value: fmtDT(rf.requested_at) },
-                                                    ].map(({ label, value }) => (
-                                                        <div key={label}>
-                                                            <p style={{ fontSize:'10px', fontFamily:'Afacad, sans-serif', color:'#9CA3AF', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.04em' }}>{label}</p>
-                                                            <p style={{ fontSize:'12px', fontFamily:'Afacad, sans-serif', fontWeight:600, color:'#374151' }}>{value}</p>
-                                                        </div>
-                                                    ))}
-                                                </div>
-
-                                                {/* Reason */}
-                                                {rf.reason && (
-                                                    <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'8px 12px', background:'#FEF3C7', borderRadius:'8px', marginBottom:'8px' }}>
-                                                        <span style={{ fontSize:'14px' }}></span>
-                                                        <p style={{ fontSize:'12px', fontFamily:'Afacad, sans-serif', color:'#92400E', fontWeight:600 }}>
-                                                            Reason: {rf.reason}
-                                                        </p>
-                                                    </div>
-                                                )}
-
-                                                {rf.resolved_at && (
-                                                    <p style={{ fontSize:'11px', fontFamily:'Afacad, sans-serif', color:'#9CA3AF' }}>
-                                                        Resolved by <strong>{rf.resolved_by}</strong> · {fmtDT(rf.resolved_at)}
-                                                    </p>
-                                                )}
+                    {/* Secondary stats row */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        {/* Out of stock games */}
+                        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px' }}>
+                            <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>Stock Alerts</h3>
+                            {outOfStock === 0 ? (
+                                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>All games have keys available.</p>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {games.filter(g => g.available_keys === 0).slice(0, 5).map(g => (
+                                        <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <img src={g.image || `https://picsum.photos/seed/${g.id}/60/40`} alt={g.name}
+                                                 style={{ width: '44px', height: '30px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
+                                                 onError={e => (e.currentTarget.src = `https://picsum.photos/seed/${g.id}/60/40`)} />
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</p>
+                                                <p style={{ fontSize: '11px', color: 'var(--danger)' }}>Out of stock</p>
                                             </div>
-
-                                            {/* Actions */}
-                                            {rf.status==='pending' && (
-                                                <div className="flex flex-col gap-2" style={{ flexShrink:0 }}>
-                                                    <button onClick={() => handleRefundAction(rf.id,'approve')} disabled={actioning===rf.id}
-                                                            style={{ padding:'9px 22px', borderRadius:'10px', border:'none', background:'#22C55E', color:'white', cursor:'pointer', fontSize:'13px', fontFamily:'Afacad, sans-serif', fontWeight:700, opacity:actioning===rf.id?0.5:1, whiteSpace:'nowrap' }}>
-                                                        ✓ Approve
-                                                    </button>
-                                                    <button onClick={() => handleRefundAction(rf.id,'reject')} disabled={actioning===rf.id}
-                                                            style={{ padding:'9px 22px', borderRadius:'10px', border:'1px solid #FEE2E2', background:'white', color:'#EF4444', cursor:'pointer', fontSize:'13px', fontFamily:'Afacad, sans-serif', fontWeight:700, opacity:actioning===rf.id?0.5:1, whiteSpace:'nowrap' }}>
-                                                        ✕ Reject
-                                                    </button>
-                                                </div>
-                                            )}
+                                            <button onClick={() => { openEdit(g); setTab('games') }} style={{ padding: '4px 10px', fontSize: '11px', fontWeight: 600, background: 'var(--bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', flexShrink: 0 }}>Edit</button>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                    {outOfStock > 5 && <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>+{outOfStock - 5} more out of stock</p>}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Recent refunds */}
+                        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                                <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>Pending Refunds</h3>
+                                {pendingCount > 0 && (
+                                    <button onClick={() => setTab('refunds')} style={{ fontSize: '12px', color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                                        View all →
+                                    </button>
+                                )}
                             </div>
-                        )}
+                            {pendingCount === 0 ? (
+                                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No pending refunds.</p>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {refunds.filter(r => r.status === 'pending').slice(0, 4).map(r => (
+                                        <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.game_name}</p>
+                                                <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>by {r.user_username} · R${parseFloat(r.total_paid || 0).toFixed(2)}</p>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                                                <button onClick={() => resolveRefund(r.id, 'approve')} style={{ padding: '4px 8px', fontSize: '11px', fontWeight: 600, background: 'rgba(30,142,62,0.1)', color: 'var(--success)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontFamily: 'inherit' }}>✓</button>
+                                                <button onClick={() => resolveRefund(r.id, 'reject')} style={{ padding: '4px 8px', fontSize: '11px', fontWeight: 600, background: 'rgba(217,48,37,0.1)', color: 'var(--danger)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
 
-            {/* ══ GAME MODAL ══ */}
+            {/* ══════════════════════════════════════════════════════
+                GAMES TAB
+            ══════════════════════════════════════════════════════ */}
+            {tab === 'games' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {/* Search */}
+                        <div style={{ position: 'relative', flex: 1, maxWidth: '360px' }}>
+                            <svg style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                <circle cx="11" cy="11" r="8" stroke="var(--text-muted)" strokeWidth="2"/>
+                                <path d="M21 21l-4.35-4.35" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round"/>
+                            </svg>
+                            <input value={gSearch} onChange={e => setGSearch(e.target.value)} placeholder="Search games..."
+                                   style={{ ...inputCls, paddingLeft: '36px', maxWidth: '100%' }} />
+                        </div>
+                        <div style={{ flex: 1 }} />
+                        <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{filteredGames.length} game{filteredGames.length !== 1 ? 's' : ''}</span>
+                        <button onClick={openCreate} style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            padding: '9px 18px', background: 'var(--accent)', color: 'white',
+                            border: 'none', borderRadius: '999px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit',
+                        }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                            Add Game
+                        </button>
+                    </div>
+
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
+                                    {['Game', 'Platform', 'Rental/dia', 'Rating', 'Stock', 'Tags', 'Actions'].map(h => (
+                                        <th key={h} style={{ padding: '11px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left' }}>{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredGames.map((g, i) => (
+                                    <tr key={g.id}
+                                        style={{ borderBottom: i < filteredGames.length - 1 ? '1px solid var(--border-light)' : 'none', transition: 'background 120ms ease' }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                                        {/* Game */}
+                                        <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <img src={g.image || `https://picsum.photos/seed/${g.id}/60/40`} alt={g.name}
+                                                     style={{ width: '56px', height: '38px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border)' }}
+                                                     onError={e => (e.currentTarget.src = `https://picsum.photos/seed/${g.id}/60/40`)} />
+                                                <div>
+                                                    <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{g.name}</p>
+                                                    {g.publisher && <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>{g.publisher.name}</p>}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        {/* Platform */}
+                                        <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                                            <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 600, background: 'var(--surface-2)', color: 'var(--text-secondary)', border: '1px solid var(--border)', textTransform: 'capitalize' }}>
+                                                {g.platform_display}
+                                            </span>
+                                        </td>
+                                        {/* Price */}
+                                        <td style={{ padding: '12px 16px', verticalAlign: 'middle', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                                            R${parseFloat(g.rental_price).toFixed(2)}
+                                        </td>
+                                        {/* Rating */}
+                                        <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                <Stars rating={parseFloat(g.rating)} size={11} />
+                                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>{parseFloat(g.rating).toFixed(1)}</span>
+                                            </div>
+                                        </td>
+                                        {/* Stock */}
+                                        <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                                            <span style={{
+                                                padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700,
+                                                background: g.available_keys === 0 ? 'rgba(217,48,37,0.08)' : 'rgba(30,142,62,0.08)',
+                                                color: g.available_keys === 0 ? 'var(--danger)' : 'var(--success)',
+                                            }}>
+                                                {g.available_keys === 0 ? 'Out of stock' : `${g.available_keys} keys`}
+                                            </span>
+                                        </td>
+                                        {/* Tags */}
+                                        <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                                            <div style={{ display: 'flex', gap: '5px' }}>
+                                                {g.is_featured && <span style={{ padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: 700, background: 'var(--accent-light)', color: 'var(--accent)' }}>★ Featured</span>}
+                                                {g.is_new && <span style={{ padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: 700, background: '#E6F4EA', color: '#1E8E3E' }}>New</span>}
+                                            </div>
+                                        </td>
+                                        {/* Actions */}
+                                        <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <button onClick={() => openEdit(g)} style={{ padding: '5px 12px', fontSize: '12px', fontWeight: 600, background: 'var(--bg)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit' }}>Edit</button>
+                                                {deleteConfirm === g.id ? (
+                                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                                        <button onClick={() => deleteGame(g.id)} style={{ padding: '5px 10px', fontSize: '12px', fontWeight: 600, background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit' }}>Confirm</button>
+                                                        <button onClick={() => setDeleteConfirm(null)} style={{ padding: '5px 10px', fontSize: '12px', background: 'var(--bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer' }}>✕</button>
+                                                    </div>
+                                                ) : (
+                                                    <button onClick={() => setDeleteConfirm(g.id)} style={{ padding: '5px 12px', fontSize: '12px', fontWeight: 600, background: 'rgba(217,48,37,0.06)', color: 'var(--danger)', border: '1px solid rgba(217,48,37,0.15)', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit' }}>Delete</button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {filteredGames.length === 0 && (
+                            <div style={{ padding: '48px', textAlign: 'center' }}>
+                                <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{loading ? 'Loading...' : 'No games found.'}</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════
+                USERS TAB
+            ══════════════════════════════════════════════════════ */}
+            {tab === 'users' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ position: 'relative', flex: 1, maxWidth: '360px' }}>
+                            <svg style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                <circle cx="11" cy="11" r="8" stroke="var(--text-muted)" strokeWidth="2"/>
+                                <path d="M21 21l-4.35-4.35" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round"/>
+                            </svg>
+                            <input value={uSearch} onChange={e => setUSearch(e.target.value)} placeholder="Search by username or email..."
+                                   style={{ ...inputCls, paddingLeft: '36px', maxWidth: '100%' }} />
+                        </div>
+                        <span style={{ fontSize: '13px', color: 'var(--text-muted)', marginLeft: 'auto' }}>{filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''}</span>
+                    </div>
+
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
+                        {filteredUsers.map((u, i) => (
+                            <div key={u.id} style={{ borderBottom: i < filteredUsers.length - 1 ? '1px solid var(--border-light)' : 'none' }}>
+                                {/* Row */}
+                                <button
+                                    onClick={() => setExpandedUser(expandedUser === u.id ? null : u.id)}
+                                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', transition: 'background 120ms ease' }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-2)')}
+                                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                >
+                                    {/* Avatar */}
+                                    <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--accent)', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        {u.avatar
+                                            ? <img src={u.avatar} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            : <span style={{ color: 'white', fontSize: '14px', fontWeight: 700 }}>{u.username?.slice(0, 1).toUpperCase()}</span>
+                                        }
+                                    </div>
+                                    {/* Name + email */}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{u.username}</span>
+                                            {u.is_staff && <span style={{ padding: '1px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: 700, background: 'var(--accent-light)', color: 'var(--accent)' }}>Admin</span>}
+                                            {!u.is_verified && <span style={{ padding: '1px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: 700, background: 'rgba(251,188,4,0.12)', color: '#B8860B' }}>Unverified</span>}
+                                        </div>
+                                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '1px' }}>{u.email}</p>
+                                    </div>
+                                    {/* Rentals count */}
+                                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                        <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>{u.rental_count ?? 0}</p>
+                                        <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>rentals</p>
+                                    </div>
+                                    {/* Chevron */}
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, transform: expandedUser === u.id ? 'rotate(180deg)' : 'none', transition: 'transform 200ms ease', color: 'var(--text-muted)' }}>
+                                        <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                                    </svg>
+                                </button>
+
+                                {/* Expanded */}
+                                {expandedUser === u.id && (
+                                    <div style={{ padding: '0 20px 20px', borderTop: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                        {/* Stats mini-cards */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', paddingTop: '16px' }}>
+                                            {[
+                                                { label: 'User ID', value: `#${u.id}` },
+                                                { label: 'Joined', value: u.date_joined ? new Date(u.date_joined).toLocaleDateString('pt-BR') : '—' },
+                                                { label: 'Total Rentals', value: u.rental_count ?? 0 },
+                                            ].map(({ label, value }) => (
+                                                <div key={label} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 14px' }}>
+                                                    <p style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
+                                                    <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '3px' }}>{value}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {/* Action */}
+                                        <button
+                                            onClick={() => sendReset(u.id)}
+                                            style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: resetSent === u.id ? 'rgba(30,142,62,0.08)' : 'var(--bg)', color: resetSent === u.id ? 'var(--success)' : 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: '999px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 200ms ease' }}
+                                        >
+                                            {resetSent === u.id
+                                                ? <><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="var(--success)" strokeWidth="2.5" strokeLinecap="round"/></svg> Reset Email Sent</>
+                                                : <><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" strokeWidth="1.8"/><polyline points="22,6 12,13 2,6" stroke="currentColor" strokeWidth="1.8"/></svg> Send Password Reset</>
+                                            }
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                        {filteredUsers.length === 0 && (
+                            <div style={{ padding: '48px', textAlign: 'center' }}>
+                                <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>No users found.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════
+                REFUNDS TAB
+            ══════════════════════════════════════════════════════ */}
+            {tab === 'refunds' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {/* Filter pills */}
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                        {(['pending', 'approved', 'rejected', 'all'] as RefundFilter[]).map(f => {
+                            const count = f === 'all' ? refunds.length : refunds.filter(r => r.status === f).length
+                            return (
+                                <button key={f} onClick={() => setRefundFilter(f)} style={{
+                                    display: 'flex', alignItems: 'center', gap: '6px',
+                                    padding: '7px 16px', fontSize: '13px', fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                                    borderRadius: '999px', textTransform: 'capitalize',
+                                    background: refundFilter === f ? 'var(--accent)' : 'var(--surface)',
+                                    color: refundFilter === f ? 'white' : 'var(--text-secondary)',
+                                    outline: refundFilter === f ? 'none' : '1px solid var(--border)',
+                                }}>
+                                    {f}
+                                    <span style={{ padding: '1px 6px', borderRadius: '999px', fontSize: '10px', fontWeight: 700, background: refundFilter === f ? 'rgba(255,255,255,0.25)' : 'var(--surface-2)', color: refundFilter === f ? 'white' : 'var(--text-muted)' }}>
+                                        {count}
+                                    </span>
+                                </button>
+                            )
+                        })}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {filteredRefunds.map(r => (
+                            <div key={r.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                <img src={r.game_image || `https://picsum.photos/seed/${r.game_id}/80/54`} alt={r.game_name}
+                                     style={{ width: '72px', height: '48px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border)' }}
+                                     onError={e => (e.currentTarget.src = `https://picsum.photos/seed/${r.game_id}/80/54`)} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
+                                        <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>{r.game_name}</p>
+                                        <StatusPill status={r.status} />
+                                    </div>
+                                    <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                        by <strong style={{ color: 'var(--text-secondary)' }}>{r.user_username}</strong>
+                                        {' · '}R${parseFloat(r.total_paid || 0).toFixed(2)} paid
+                                    </p>
+                                    {r.reason && (
+                                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', fontStyle: 'italic' }}>"{r.reason}"</p>
+                                    )}
+                                </div>
+                                {r.status === 'pending' && (
+                                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                                        <button onClick={() => resolveRefund(r.id, 'approve')} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 14px', fontSize: '12px', fontWeight: 600, background: 'rgba(30,142,62,0.08)', color: 'var(--success)', border: '1px solid rgba(30,142,62,0.2)', borderRadius: '999px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                                            Approve
+                                        </button>
+                                        <button onClick={() => resolveRefund(r.id, 'reject')} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 14px', fontSize: '12px', fontWeight: 600, background: 'rgba(217,48,37,0.06)', color: 'var(--danger)', border: '1px solid rgba(217,48,37,0.15)', borderRadius: '999px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                                            Reject
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                        {filteredRefunds.length === 0 && (
+                            <div style={{ padding: '48px', textAlign: 'center', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px' }}>
+                                <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>No {refundFilter !== 'all' ? refundFilter : ''} refunds found.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════
+                GAME MODAL
+            ══════════════════════════════════════════════════════ */}
             {showModal && (
-                <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:'24px' }}
-                     onClick={e => { if (e.target===e.currentTarget) setShowModal(false) }}>
-                    <div style={{ background:'white', borderRadius:'20px', width:'100%', maxWidth:'640px', maxHeight:'90vh', overflowY:'auto', padding:'28px', boxShadow:'0 24px 64px rgba(0,0,0,0.15)' }}>
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 style={{ fontSize:'18px', fontFamily:'Afacad, sans-serif', fontWeight:700, color:'#1A1A1A' }}>{editingGame ? `Edit — ${editingGame.name}` : 'Add New Game'}</h2>
-                            <button onClick={() => setShowModal(false)} style={{ background:'none', border:'none', cursor:'pointer', color:'#9CA3AF' }}>
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '32px', paddingBottom: '32px', overflowY: 'auto', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
+                     onClick={() => setShowModal(false)}>
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '24px', width: '560px', maxWidth: '95vw', padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px', margin: 'auto' }}
+                         onClick={e => e.stopPropagation()}>
+
+                        {/* Modal header */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>{editGame ? 'Edit Game' : 'Add New Game'}</h2>
+                            <button onClick={() => setShowModal(false)} style={{ width: '32px', height: '32px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                             </button>
                         </div>
-                        <div className="flex flex-col gap-4">
-                            <div>
-                                <label style={labelSt}>Cover Image</label>
-                                <div style={{ display:'flex', gap:'12px', alignItems:'center' }}>
-                                    {imgPreview && <img src={imgPreview} alt="preview" style={{ width:'80px', height:'60px', borderRadius:'8px', objectFit:'cover', border:'1px solid #EBEBEB' }} />}
-                                    <button onClick={() => fileRef.current?.click()} style={{ padding:'8px 16px', border:'1px dashed #D0D0D0', borderRadius:'10px', background:'#FAFAFA', cursor:'pointer', fontSize:'13px', fontFamily:'Afacad, sans-serif', color:'#6B7280' }}>{imgPreview ? 'Change image' : 'Upload image'}</button>
-                                    <input ref={fileRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handleImgChange} />
+
+                        {/* Image upload */}
+                        <div>
+                            <label style={labelCls}>Cover Image</label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                <div style={{ width: '120px', height: '80px', borderRadius: '12px', background: 'var(--bg)', border: '2px dashed var(--border)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    {(imageFile || editGame?.image) ? (
+                                        <img src={imageFile ? URL.createObjectURL(imageFile) : editGame!.image!} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                                    )}
                                 </div>
-                            </div>
-                            <div><label style={labelSt}>Game Name *</label><input style={inputSt} value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="e.g. God of War: Ragnarök" /></div>
-                            <div><label style={labelSt}>Description</label><textarea style={{ ...inputSt, minHeight:'80px', resize:'vertical' }} value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))} /></div>
-                            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
-                                <div><label style={labelSt}>Platform *</label><select style={inputSt} value={form.platform} onChange={e=>setForm(p=>({...p,platform:e.target.value}))}>{PLATFORMS.map(p=><option key={p.value} value={p.value}>{p.label}</option>)}</select></div>
-                                <div><label style={labelSt}>Release Date</label><input style={inputSt} type="date" value={form.release_date} onChange={e=>setForm(p=>({...p,release_date:e.target.value}))} /></div>
-                            </div>
-                            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px' }}>
-                                <div><label style={labelSt}>Original Price ($)</label><input style={inputSt} type="number" step="0.01" value={form.original_price} onChange={e=>setForm(p=>({...p,original_price:e.target.value}))} placeholder="59.99" /></div>
-                                <div><label style={labelSt}>Rental/wk ($)</label><input style={inputSt} type="number" step="0.01" value={form.rental_price} onChange={e=>setForm(p=>({...p,rental_price:e.target.value}))} placeholder="0.30" /></div>
-                                <div><label style={labelSt}>Rating (0–5)</label><input style={inputSt} type="number" step="0.1" min="0" max="5" value={form.rating} onChange={e=>setForm(p=>({...p,rating:e.target.value}))} placeholder="4.5" /></div>
-                            </div>
-                            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
-                                <div><label style={labelSt}>Publisher Name</label><input style={inputSt} value={form.publisher_name} onChange={e=>setForm(p=>({...p,publisher_name:e.target.value}))} placeholder="e.g. Naughty Dog" /></div>
-                                <div><label style={labelSt}>{editingGame ? 'Add Keys' : 'Initial Keys'}</label><input style={inputSt} type="number" min="0" value={form.keys_to_add} onChange={e=>setForm(p=>({...p,keys_to_add:parseInt(e.target.value)||0}))} /></div>
-                            </div>
-                            <div>
-                                <label style={labelSt}>Genres</label>
-                                <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
-                                    {GENRE_OPTIONS.map(g=><button key={g} onClick={()=>toggleGenre(g)} style={{ padding:'4px 12px', borderRadius:'20px', fontSize:'12px', fontFamily:'Afacad, sans-serif', cursor:'pointer', border:form.genre.includes(g)?'none':'1px solid #E0E0E0', background:form.genre.includes(g)?'#1A1A1A':'white', color:form.genre.includes(g)?'white':'#6B7280', fontWeight:form.genre.includes(g)?600:400 }}>{g}</button>)}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <button onClick={() => imgRef.current?.click()} style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: 'var(--bg)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: '10px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                                        {imageFile ? 'Change Image' : 'Upload Image'}
+                                    </button>
+                                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>PNG, JPG up to 5MB</p>
                                 </div>
+                                <input ref={imgRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => setImageFile(e.target.files?.[0] || null)} />
                             </div>
-                            <div style={{ display:'flex', gap:'20px' }}>
-                                {[{key:'is_featured',label:'Featured (rating ≥ 4.7)'},{key:'is_new',label:'Mark as New'}].map(({key,label})=>(
-                                    <label key={key} style={{ display:'flex', alignItems:'center', gap:'8px', cursor:'pointer', fontSize:'13px', fontFamily:'Afacad, sans-serif', color:'#374151' }}>
-                                        <input type="checkbox" checked={form[key as 'is_featured'|'is_new']} onChange={e=>setForm(p=>({...p,[key]:e.target.checked}))} style={{ width:'15px', height:'15px', cursor:'pointer' }} />
-                                        {label}
-                                    </label>
+                        </div>
+
+                        {/* Fields grid */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                            {[
+                                { label: 'Game Name', key: 'name', type: 'text', placeholder: 'e.g. God of War' },
+                                { label: 'Publisher', key: 'publisher', type: 'text', placeholder: 'e.g. Sony Interactive' },
+                                { label: 'Original Price (R$)', key: 'original_price', type: 'number', placeholder: '299.90' },
+                                { label: 'Rental Price / day (R$)', key: 'rental_price', type: 'number', placeholder: '9.99' },
+                                { label: 'Rating (0–5)', key: 'rating', type: 'number', placeholder: '4.5' },
+                                { label: 'Release Date', key: 'release_date', type: 'date', placeholder: '' },
+                            ].map(({ label, key, type, placeholder }) => (
+                                <div key={key}>
+                                    <label style={labelCls}>{label}</label>
+                                    <input type={type} value={(form as any)[key]} placeholder={placeholder}
+                                           onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+                                           style={inputCls}
+                                           onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                                           onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Description */}
+                        <div>
+                            <label style={labelCls}>Description</label>
+                            <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder="Brief game description..."
+                                      style={{ ...inputCls, resize: 'none', lineHeight: 1.6 }}
+                                      onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                                      onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
+                        </div>
+
+                        {/* Platform */}
+                        <div>
+                            <label style={labelCls}>Platform</label>
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                {PLATFORMS.map(p => (
+                                    <button key={p} onClick={() => setForm(f => ({ ...f, platform: p }))} style={{
+                                        padding: '5px 14px', fontSize: '12px', fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit', borderRadius: '999px', textTransform: 'capitalize',
+                                        background: form.platform === p ? 'var(--accent)' : 'var(--bg)',
+                                        color: form.platform === p ? 'white' : 'var(--text-secondary)',
+                                        outline: form.platform === p ? 'none' : '1px solid var(--border)',
+                                    }}>{p}</button>
                                 ))}
                             </div>
-                            {saveError && <p style={{ fontSize:'13px', color:'#EF4444', fontFamily:'Afacad, sans-serif', background:'#FEF2F2', padding:'10px 14px', borderRadius:'10px' }}>{saveError}</p>}
-                            <div className="flex justify-end gap-3 mt-2">
-                                <button onClick={() => setShowModal(false)} style={{ padding:'10px 20px', borderRadius:'12px', border:'1px solid #E0E0E0', background:'white', cursor:'pointer', fontSize:'14px', fontFamily:'Afacad, sans-serif', color:'#374151' }}>Cancel</button>
-                                <button onClick={handleSave} disabled={saving} style={{ padding:'10px 24px', borderRadius:'12px', border:'none', background:'#1A1A1A', color:'white', cursor:saving?'not-allowed':'pointer', fontSize:'14px', fontFamily:'Afacad, sans-serif', fontWeight:600, opacity:saving?0.6:1 }}>
-                                    {saving ? 'Saving...' : editingGame ? 'Save Changes' : 'Create Game'}
-                                </button>
+                        </div>
+
+                        {/* Genres */}
+                        <div>
+                            <label style={labelCls}>Genres <span style={{ color: 'var(--text-muted)', fontWeight: 400, textTransform: 'none' }}>({form.genre.length} selected)</span></label>
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                {GENRES_LIST.map(g => (
+                                    <button key={g} onClick={() => setForm(f => ({ ...f, genre: f.genre.includes(g) ? f.genre.filter(x => x !== g) : [...f.genre, g] }))} style={{
+                                        padding: '5px 14px', fontSize: '12px', fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit', borderRadius: '999px',
+                                        background: form.genre.includes(g) ? 'var(--accent)' : 'var(--bg)',
+                                        color: form.genre.includes(g) ? 'white' : 'var(--text-secondary)',
+                                        outline: form.genre.includes(g) ? 'none' : '1px solid var(--border)',
+                                    }}>{g}</button>
+                                ))}
                             </div>
+                        </div>
+
+                        {/* Flags */}
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            {[{ label: '★ Featured', key: 'is_featured' }, { label: '🆕 New Release', key: 'is_new' }].map(({ label, key }) => (
+                                <button key={key} onClick={() => setForm(f => ({ ...f, [key]: !(f as any)[key] }))} style={{
+                                    padding: '8px 18px', fontSize: '13px', fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit', borderRadius: '999px',
+                                    background: (form as any)[key] ? 'var(--accent)' : 'var(--bg)',
+                                    color: (form as any)[key] ? 'white' : 'var(--text-secondary)',
+                                    outline: (form as any)[key] ? 'none' : '1px solid var(--border)',
+                                    transition: 'all 150ms ease',
+                                }}>
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Footer buttons */}
+                        <div style={{ display: 'flex', gap: '10px', paddingTop: '4px', borderTop: '1px solid var(--border-light)' }}>
+                            <button onClick={() => setShowModal(false)} style={{ flex: 1, padding: '12px', fontSize: '14px', fontWeight: 600, background: 'var(--bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '999px', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+                            <button onClick={saveGame} disabled={saving} style={{ flex: 2, padding: '12px', fontSize: '14px', fontWeight: 600, background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '999px', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, fontFamily: 'inherit', transition: 'background 150ms ease' }}>
+                                {saving ? 'Saving...' : editGame ? 'Save Changes' : 'Create Game'}
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -1,275 +1,389 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { Game } from '../../types'
+import { useEffect, useState, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import type { Game } from '../../types'
 import { getGames } from '../../services/api'
-import { useApp } from '../../context/AppContext'
-import GameCard from '../../components/GameCard/GameCard'
-import FeaturedSidebar from '../../components/FeaturedSidebar/FeaturedSidebar'
-import HeroSection from '../../components/HeroSection/HeroSection'
+import GameCard from '../../components/game/GameCard'
+import { GameCardSkeleton } from '../../components/ui/Skeleton'
+import Stars from '../../components/ui/Stars'
+import { useAuth } from '../../context/AuthContext'
+import { useCart } from '../../context/CartContext'
 
-interface HomeProps {
-    setPage: (p: string) => void
-    setSelectedGame: (g: Game) => void
-    onPublisher: (id: number, name: string) => void
-}
+const PAGE_SIZE = 8
 
-const AUTO_ADVANCE_MS = 5000
-const FEATURED_MIN_RATING = 4.7
-const GAMES_PER_PAGE = 20
-const SORT_OPTIONS = ['Most Popular', 'Lowest Price', 'Highest Price', 'A-Z']
-
-export default function Home({ setPage, setSelectedGame, onPublisher }: HomeProps) {
-    const [games, setGames] = useState<Game[]>([])
-    const [heroGames, setHeroGames] = useState<Game[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-    const [activeIndex, setActiveIndex] = useState(0)
-    const [progress, setProgress] = useState(0)
-    const [currentPage, setCurrentPage] = useState(1)
-    const [search, setSearch] = useState('')
-    const [sort, setSort] = useState('Most Popular')
-    const { addToCart, isAuthenticated } = useApp()
-
-    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-    const progressRef = useRef<ReturnType<typeof setInterval> | null>(null)
-    const allGamesSectionRef = useRef<HTMLDivElement>(null)
-
-    const startTimer = useCallback((total: number) => {
-        if (timerRef.current) clearTimeout(timerRef.current)
-        if (progressRef.current) clearInterval(progressRef.current)
-        setProgress(0)
-        const steps = AUTO_ADVANCE_MS / 50
-        let step = 0
-        progressRef.current = setInterval(() => {
-            step++
-            setProgress(Math.min((step / steps) * 100, 100))
-        }, 50)
-        timerRef.current = setTimeout(() => {
-            setActiveIndex(i => (i + 1) % total)
-        }, AUTO_ADVANCE_MS)
-    }, [])
-
-    useEffect(() => {
-        if (heroGames.length > 0) startTimer(heroGames.length)
-        return () => {
-            if (timerRef.current) clearTimeout(timerRef.current)
-            if (progressRef.current) clearInterval(progressRef.current)
-        }
-    }, [activeIndex, heroGames.length, startTimer])
-
-    useEffect(() => {
-        getGames()
-            .then(({ data }) => {
-                setGames(data)
-                const featured = data.filter((g: Game) => parseFloat(g.rating) >= FEATURED_MIN_RATING)
-                setHeroGames(featured)
-            })
-            .catch(console.error)
-            .finally(() => setIsLoading(false))
-    }, [])
-
-    // Reset página ao mudar filtros
-    useEffect(() => { setCurrentPage(1) }, [search, sort])
-
-    const handleRent = (game: Game) => {
-        if (!isAuthenticated) { setPage('login'); return }
-        addToCart(game)
-        setPage('cart')
-    }
-
-    const filtered = games
-        .filter(g => g.name.toLowerCase().includes(search.toLowerCase()))
-        .sort((a, b) => {
-            if (sort === 'Lowest Price') return parseFloat(a.rental_price) - parseFloat(b.rental_price)
-            if (sort === 'Highest Price') return parseFloat(b.rental_price) - parseFloat(a.rental_price)
-            if (sort === 'A-Z') return a.name.localeCompare(b.name)
-            return parseFloat(b.rating) - parseFloat(a.rating)
-        })
-
-    const totalPages = Math.ceil(filtered.length / GAMES_PER_PAGE)
-    const paginatedGames = filtered.slice((currentPage - 1) * GAMES_PER_PAGE, currentPage * GAMES_PER_PAGE)
-
-    const goToPage = (page: number) => {
-        setCurrentPage(page)
-        allGamesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-
-    if (isLoading) return (
-        <div className="flex items-center justify-center h-64">
-            <div className="text-gray-400 text-sm" style={{ fontFamily: 'Afacad, sans-serif' }}>Loading...</div>
+function Section({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
+    return (
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 40px', ...style }}>
+            {children}
         </div>
     )
+}
+
+export default function Home() {
+    const navigate = useNavigate()
+    const { isAuthenticated } = useAuth()
+    const { addToCart, inCart } = useCart()
+
+    const [games, setGames] = useState<Game[]>([])
+    const [loading, setLoading] = useState(true)
+    const [heroIndex, setHeroIndex] = useState(0)
+    const [page, setPage] = useState(1)
+    const heroTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+    useEffect(() => {
+        setLoading(true)
+        getGames()
+            .then(({ data }) => setGames(data.data ?? data))
+            .catch(console.error)
+            .finally(() => setLoading(false))
+    }, [])
+
+    const featured = games.filter(g => g.is_featured)
+    const hero = featured[heroIndex]
+
+    const startTimer = (len: number) => {
+        if (heroTimerRef.current) clearInterval(heroTimerRef.current)
+        heroTimerRef.current = setInterval(() => setHeroIndex(i => (i + 1) % len), 6000)
+    }
+
+    // Auto-advance hero
+    useEffect(() => {
+        if (featured.length < 2) return
+        startTimer(featured.length)
+        return () => { if (heroTimerRef.current) clearInterval(heroTimerRef.current) }
+    }, [featured.length])
+
+    const goTo = (idx: number) => {
+        setHeroIndex(idx)
+        if (featured.length >= 2) startTimer(featured.length)
+    }
+
+    const paged = games.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+    const totalPages = Math.ceil(games.length / PAGE_SIZE)
 
     return (
-        <div className="flex flex-col gap-6">
+        <div style={{ paddingBottom: '80px' }}>
+            <style>{`
+                @keyframes heroContentIn {
+                    from { opacity: 0; transform: translateY(12px); }
+                    to   { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
 
-            {/* Hero + Sidebar lado a lado */}
-            <div className="flex gap-5">
-                <div className="flex-1 min-w-0">
-                    {heroGames.length > 0 && (
-                        <HeroSection
-                            games={heroGames}
-                            activeIndex={activeIndex}
-                            onIndexChange={setActiveIndex}
-                            onDetails={setSelectedGame}
-                            onRent={handleRent}
-                            onPublisher={onPublisher}
-                        />
-                    )}
-                </div>
-                <FeaturedSidebar
-                    games={heroGames}
-                    activeIndex={activeIndex}
-                    progress={progress}
-                    onSelect={setActiveIndex}
-                    onSeeAll={() => setPage('featured')}
-                />
-            </div>
-
-            {/* All Games — largura total */}
-            <div ref={allGamesSectionRef}>
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="font-bold text-gray-900" style={{ fontSize: '16px', fontFamily: 'Afacad, sans-serif' }}>
-                        All Games
-                    </h2>
-
-                    {/* Search + sort + contador */}
-                    <div className="flex items-center gap-3">
-                        <div className="relative">
-                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                                 width="13" height="13" viewBox="0 0 24 24" fill="none">
-                                <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
-                                <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                            </svg>
-                            <input
-                                type="text"
-                                placeholder="Search games..."
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
+            {/* ─── Campo acima do hero ──────────────────────────────── */}
+            {!loading && hero && (
+                <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '20px 40px 16px' }}>
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '16px',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                            <span style={{
+                                fontSize: '15px', fontWeight: 500, color: 'var(--text-primary)',
+                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                maxWidth: '220px', flexShrink: 0,
+                            }}>
+                                {hero.name}
+                            </span>
+                            <button style={{
+                                padding: '6px 16px', borderRadius: '999px', fontSize: '13px', fontWeight: 500,
+                                border: 'none', background: 'var(--accent-light)', color: 'var(--accent)',
+                                cursor: 'default', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap',
+                            }}>
+                                Overview
+                            </button>
+                            <button
+                                onClick={() => navigate(`/game/${hero.id}`)}
                                 style={{
-                                    paddingLeft: '30px', paddingRight: search ? '30px' : '12px',
-                                    paddingTop: '7px', paddingBottom: '7px',
-                                    border: '1px solid #E0E0E0', borderRadius: '10px',
-                                    fontSize: '13px', fontFamily: 'Afacad, sans-serif',
-                                    outline: 'none', background: 'white', width: '200px',
-                                    color: '#1A1A1A',
+                                    padding: '6px 16px', borderRadius: '999px', fontSize: '13px', fontWeight: 400,
+                                    border: 'none', background: 'var(--surface-2)', color: 'var(--text-secondary)',
+                                    cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap',
+                                    transition: 'background 150ms ease, color 150ms ease',
                                 }}
-                            />
-                            {search && (
+                                onMouseEnter={e => { e.currentTarget.style.background = 'var(--border)'; e.currentTarget.style.color = 'var(--text-primary)' }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
+                            >
+                                Game Details
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
+                            <div style={{ textAlign: 'right' }}>
+                                <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                                    R${parseFloat(hero.rental_price).toFixed(2)}
+                                    <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--text-muted)', marginLeft: '2px' }}>/dia</span>
+                                </p>
+                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                    {hero.available_keys > 0 ? `${hero.available_keys} keys available` : 'Out of stock'}
+                                </p>
+                            </div>
+                            {hero.available_keys > 0 && (
                                 <button
-                                    onClick={() => setSearch('')}
-                                    style={{
-                                        position: 'absolute', right: '10px', top: '50%',
-                                        transform: 'translateY(-50%)', background: 'none',
-                                        border: 'none', cursor: 'pointer', color: '#9CA3AF',
-                                        padding: 0, display: 'flex', alignItems: 'center',
+                                    onClick={() => {
+                                        if (!isAuthenticated) { navigate('/login'); return }
+                                        if (!inCart(hero.id)) addToCart(hero)
+                                        navigate('/cart')
                                     }}
+                                    style={{
+                                        padding: '9px 24px', background: 'var(--accent)', color: 'white',
+                                        border: 'none', borderRadius: '999px', fontSize: '14px', fontWeight: 600,
+                                        cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                                        transition: 'background 150ms ease',
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
                                 >
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                                    </svg>
+                                    Rent now
                                 </button>
                             )}
                         </div>
-                        <select
-                            value={sort}
-                            onChange={e => setSort(e.target.value)}
-                            style={{
-                                padding: '7px 12px', border: '1px solid #E0E0E0', borderRadius: '10px',
-                                fontSize: '13px', fontFamily: 'Afacad, sans-serif', color: '#374151',
-                                background: 'white', outline: 'none', cursor: 'pointer',
-                            }}
-                        >
-                            {SORT_OPTIONS.map(o => <option key={o}>{o}</option>)}
-                        </select>
-                        <span className="text-gray-400" style={{ fontSize: '13px', fontFamily: 'Afacad, sans-serif' }}>
-                            {filtered.length} games
-                        </span>
                     </div>
                 </div>
+            )}
 
-                {filtered.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16">
-                        <p className="text-gray-400 text-sm mb-2" style={{ fontFamily: 'Afacad, sans-serif' }}>No games found.</p>
-                        <button onClick={() => setSearch('')}
-                                className="text-sm text-blue-500 hover:underline"
-                                style={{ fontFamily: 'Afacad, sans-serif' }}>
-                            Clear search
-                        </button>
+            {/* ─── Hero card ────────────────────────────────────────── */}
+            {!loading && hero && (
+                <Section style={{ padding: '0 40px 0' }}>
+                    <div style={{ borderRadius: '24px', overflow: 'hidden', height: '520px', position: 'relative' }}>
+
+                        {/* Imagens empilhadas — cross-fade via opacity */}
+                        {featured.map((g, i) => (
+                            <img
+                                key={g.id}
+                                src={g.image || `https://picsum.photos/seed/${g.id}/1200/700`}
+                                alt={g.name}
+                                style={{
+                                    position: 'absolute', inset: 0, width: '100%', height: '100%',
+                                    objectFit: 'cover', objectPosition: 'center 20%',
+                                    opacity: i === heroIndex ? 1 : 0,
+                                    transition: 'opacity 700ms ease',
+                                }}
+                            />
+                        ))}
+
+                        {/* Gradiente */}
+                        <div style={{
+                            position: 'absolute', inset: 0,
+                            background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0.15) 65%, rgba(0,0,0,0.05) 100%)',
+                        }} />
+
+                        {/* Conteúdo — re-anima ao trocar de jogo */}
+                        <div
+                            key={heroIndex}
+                            style={{
+                                position: 'absolute', bottom: 0, left: 0,
+                                padding: '40px 48px', maxWidth: '560px',
+                                animation: 'heroContentIn 500ms ease',
+                            }}
+                        >
+                            {hero.publisher && (
+                                <p style={{
+                                    fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.55)',
+                                    marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.09em',
+                                }}>
+                                    {hero.publisher.name}
+                                </p>
+                            )}
+                            <h1 style={{
+                                fontSize: '44px', fontWeight: 700, color: '#FFFFFF',
+                                lineHeight: 1.1, letterSpacing: '-0.02em', marginBottom: '12px',
+                                textShadow: '0 2px 16px rgba(0,0,0,0.4)',
+                            }}>
+                                {hero.name}
+                            </h1>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px' }}>
+                                <Stars rating={parseFloat(hero.rating)} size={13} />
+                                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', fontWeight: 500 }}>
+                                    {parseFloat(hero.rating).toFixed(1)}
+                                </span>
+                            </div>
+                            <p style={{ fontSize: '20px', fontWeight: 600, color: '#FFFFFF', marginBottom: '22px' }}>
+                                R${parseFloat(hero.rental_price).toFixed(2)}
+                                <span style={{ fontSize: '13px', fontWeight: 400, color: 'rgba(255,255,255,0.6)', marginLeft: '4px' }}>/dia</span>
+                            </p>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                {hero.available_keys > 0 ? (
+                                    <button
+                                        onClick={() => {
+                                            if (!isAuthenticated) { navigate('/login'); return }
+                                            if (!inCart(hero.id)) addToCart(hero)
+                                            navigate('/cart')
+                                        }}
+                                        style={{
+                                            padding: '11px 28px', background: 'var(--accent)', color: 'white',
+                                            border: 'none', borderRadius: '999px', fontSize: '14px', fontWeight: 600,
+                                            cursor: 'pointer', fontFamily: 'inherit', transition: 'background 150ms ease',
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover)'}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
+                                    >
+                                        Rent now
+                                    </button>
+                                ) : (
+                                    <span style={{
+                                        padding: '11px 20px', background: 'rgba(255,255,255,0.15)',
+                                        color: 'rgba(255,255,255,0.7)', borderRadius: '999px',
+                                        fontSize: '14px', fontWeight: 500,
+                                    }}>
+                                        Unavailable
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Platform badge */}
+                        {hero.platform && (
+                            <div style={{
+                                position: 'absolute', top: '20px', right: '24px',
+                                padding: '5px 14px', background: 'rgba(0,0,0,0.45)',
+                                backdropFilter: 'blur(8px)', borderRadius: '999px',
+                                border: '1px solid rgba(255,255,255,0.15)',
+                            }}>
+                                <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                                    {hero.platform}
+                                </span>
+                            </div>
+                        )}
+
+                        {/* ── Navegação: prev / dots / next ───────────── */}
+                        {featured.length > 1 && (
+                            <>
+                                {/* Botão Next */}
+                                <button
+                                    onClick={() => goTo((heroIndex + 1) % featured.length)}
+                                    style={{
+                                        position: 'absolute', right: '20px', top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        width: '40px', height: '40px',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        background: 'rgba(0,0,0,0.40)',
+                                        backdropFilter: 'blur(6px)',
+                                        border: '1px solid rgba(255,255,255,0.20)',
+                                        borderRadius: '50%', cursor: 'pointer',
+                                        color: 'white',
+                                        transition: 'background 150ms ease',
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.65)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(0,0,0,0.40)'}
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                        <path d="M9 18l6-6-6-6" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                </button>
+
+                                {/* Dots */}
+                                <div style={{
+                                    position: 'absolute', bottom: '20px', right: '24px',
+                                    display: 'flex', gap: '6px', alignItems: 'center',
+                                }}>
+                                    {featured.map((_, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => goTo(i)}
+                                            style={{
+                                                width: i === heroIndex ? '20px' : '6px',
+                                                height: '6px',
+                                                borderRadius: '999px',
+                                                background: i === heroIndex ? 'white' : 'rgba(255,255,255,0.4)',
+                                                border: 'none', cursor: 'pointer', padding: 0,
+                                                transition: 'width 300ms ease, background 300ms ease',
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </Section>
+            )}
+
+            {/* Hero skeleton */}
+            {loading && (
+                <Section style={{ padding: '0 40px 0' }}>
+                    <div style={{ borderRadius: '24px', height: '520px', background: 'var(--surface-2)', animation: 'pulse 2s infinite' }} />
+                </Section>
+            )}
+
+            {/* ─── All Games ────────────────────────────────────────── */}
+            <Section style={{ paddingTop: '40px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                        All Games
+                    </h2>
+                    {!loading && (
+                        <span style={{ fontSize: '14px', color: 'var(--text-muted)', marginLeft: '8px', fontWeight: 400 }}>
+                            ({games.length})
+                        </span>
+                    )}
+                </div>
+
+                {loading ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+                        {Array.from({ length: 8 }).map((_, i) => <GameCardSkeleton key={i} />)}
                     </div>
                 ) : (
                     <>
-                        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
-                            {paginatedGames.map(g => (
-                                <GameCard key={g.id} game={g} onDetails={setSelectedGame} />
-                            ))}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+                            {paged.map(game => <GameCard key={game.id} game={game} />)}
                         </div>
 
                         {totalPages > 1 && (
-                            <div className="flex items-center justify-center gap-2 mt-6">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '48px' }}>
                                 <button
-                                    onClick={() => goToPage(currentPage - 1)}
-                                    disabled={currentPage === 1}
+                                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                                    disabled={page === 1}
                                     style={{
-                                        width: '34px', height: '34px', borderRadius: '10px',
-                                        border: '1px solid #E0E0E0', background: 'white',
-                                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                                        opacity: currentPage === 1 ? 0.4 : 1,
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        padding: '8px 16px', fontSize: '14px', fontWeight: 600,
+                                        background: 'var(--surface)', border: '1px solid var(--border)',
+                                        color: 'var(--text-primary)', borderRadius: '999px',
+                                        cursor: page === 1 ? 'not-allowed' : 'pointer',
+                                        opacity: page === 1 ? 0.4 : 1, fontFamily: 'inherit',
                                     }}
-                                >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                        <path d="M15 18L9 12L15 6" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                </button>
+                                >← Prev</button>
 
                                 {Array.from({ length: totalPages }, (_, i) => i + 1)
-                                    .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-                                    .reduce((acc: (number | string)[], p, idx, arr) => {
-                                        if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push('...')
-                                        acc.push(p)
+                                    .filter(n => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
+                                    .reduce<(number | '…')[]>((acc, n, idx, arr) => {
+                                        if (idx > 0 && n - (arr[idx - 1] as number) > 1) acc.push('…')
+                                        acc.push(n)
                                         return acc
                                     }, [])
-                                    .map((p, idx) =>
-                                        p === '...' ? (
-                                            <span key={`e-${idx}`} style={{ color: '#9CA3AF', fontSize: '13px', fontFamily: 'Afacad, sans-serif', padding: '0 4px' }}>...</span>
-                                        ) : (
-                                            <button
-                                                key={p}
-                                                onClick={() => goToPage(p as number)}
-                                                style={{
-                                                    width: '34px', height: '34px', borderRadius: '10px',
-                                                    fontSize: '13px', fontFamily: 'Afacad, sans-serif', fontWeight: 500,
-                                                    border: currentPage === p ? 'none' : '1px solid #E0E0E0',
-                                                    background: currentPage === p ? '#1A1A1A' : 'white',
-                                                    color: currentPage === p ? 'white' : '#374151',
-                                                    cursor: 'pointer',
-                                                }}
-                                            >
-                                                {p}
-                                            </button>
-                                        )
-                                    )
-                                }
+                                    .map((n, i) => n === '…' ? (
+                                        <span key={`d${i}`} style={{ color: 'var(--text-muted)', padding: '0 4px' }}>…</span>
+                                    ) : (
+                                        <button
+                                            key={n}
+                                            onClick={() => setPage(n as number)}
+                                            style={{
+                                                width: '36px', height: '36px', fontSize: '14px', fontWeight: 600,
+                                                borderRadius: '10px',
+                                                border: page === n ? '1px solid transparent' : '1px solid var(--border)',
+                                                background: page === n ? 'var(--accent)' : 'var(--surface)',
+                                                color: page === n ? 'white' : 'var(--text-primary)',
+                                                cursor: 'pointer', fontFamily: 'inherit',
+                                            }}
+                                        >
+                                            {n}
+                                        </button>
+                                    ))}
 
                                 <button
-                                    onClick={() => goToPage(currentPage + 1)}
-                                    disabled={currentPage === totalPages}
+                                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={page === totalPages}
                                     style={{
-                                        width: '34px', height: '34px', borderRadius: '10px',
-                                        border: '1px solid #E0E0E0', background: 'white',
-                                        cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                                        opacity: currentPage === totalPages ? 0.4 : 1,
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        padding: '8px 16px', fontSize: '14px', fontWeight: 600,
+                                        background: 'var(--surface)', border: '1px solid var(--border)',
+                                        color: 'var(--text-primary)', borderRadius: '999px',
+                                        cursor: page === totalPages ? 'not-allowed' : 'pointer',
+                                        opacity: page === totalPages ? 0.4 : 1, fontFamily: 'inherit',
                                     }}
-                                >
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                        <path d="M9 6L15 12L9 18" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                </button>
+                                >Next →</button>
                             </div>
                         )}
                     </>
                 )}
-            </div>
+            </Section>
         </div>
     )
 }

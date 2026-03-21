@@ -1,81 +1,70 @@
-import { Game } from '../../types'
-import { useApp } from '../../context/AppContext'
-import GameCard from '../../components/GameCard/GameCard'
-import React from 'react'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import type { Game } from '../../types'
+import { getGames } from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
+import { useFavorites } from '../../context/FavoritesContext'
+import GameCard from '../../components/game/GameCard'
+import { GameCardSkeleton } from '../../components/ui/Skeleton'
 
-interface FavoritesProps {
-    setSelectedGame: (g: Game) => void
-    allGames: Game[]
-    setPage: (p: string) => void
-}
+export default function Favorites() {
+    const navigate = useNavigate()
+    const { isAuthenticated } = useAuth()
+    const { favorites } = useFavorites()
+    const [allGames, setAllGames] = useState<Game[]>([])
+    const [loading, setLoading] = useState(true)
 
-export default function Favorites({ setSelectedGame, allGames, setPage }: FavoritesProps) {
-    const { favorites, isAuthenticated } = useApp()
+    useEffect(() => {
+        if (!isAuthenticated) { setLoading(false); return }
+        getGames()
+            .then(({ data }) => setAllGames(data.data ?? data))
+            .finally(() => setLoading(false))
+    }, [isAuthenticated])
 
-    if (!isAuthenticated) {
-        return (
-            <div className="flex flex-col items-center justify-center" style={{ minHeight: '60vh' }}>
-                <div style={{ marginBottom: '16px', color: '#000000' }}>
-                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 21C12 21 3 14 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08C14.09 3.81 15.76 3 17.5 3C20.58 3 23 5.42 23 8.5C23 14 14 21 12 21Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-                    </svg>
-                </div>
-                <h2
-                    className="font-bold text-gray-900 mb-2"
-                    style={{ fontSize: '20px', fontFamily: 'Afacad, sans-serif' }}
-                >
-                    Your favorites list is empty
-                </h2>
-                <p
-                    className="text-gray-400 mb-6 text-center"
-                    style={{ fontSize: '14px', fontFamily: 'Afacad, sans-serif', maxWidth: '320px' }}
-                >
-                    Sign in to save your favorite games and access them anytime.
-                </p>
-            </div>
-        )
-    }
+    if (!isAuthenticated) return (
+        <div className="flex flex-col items-center justify-center py-32 gap-4">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none">
+                <path d="M12 21C12 21 3 14 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08C14.09 3.81 15.76 3 17.5 3C20.58 3 23 5.42 23 8.5C23 14 14 21 12 21Z"
+                      stroke="var(--text-muted)" strokeWidth="1.5"/>
+            </svg>
+            <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>Sign in to see favorites</p>
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Save games you love and find them here.</p>
+            <button onClick={() => navigate('/login')}
+                    style={{ padding: '10px 24px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '999px', fontWeight: 600, fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                Sign In
+            </button>
+        </div>
+    )
 
     const favGames = allGames.filter(g => favorites.includes(g.id))
 
     return (
-        <div>
-            <h1
-                className="font-bold text-gray-900 mb-5"
-                style={{ fontSize: '20px', fontFamily: 'Afacad, sans-serif' }}
-            >
-                Favorites
-                {favGames.length > 0 && (
-                    <span className="text-gray-400 font-normal ml-2" style={{ fontSize: '14px' }}>
-                        {favGames.length} {favGames.length === 1 ? 'game' : 'games'}
-                    </span>
-                )}
-            </h1>
-            {favGames.length === 0 ? (
-                <div className="flex flex-col items-center justify-center" style={{ minHeight: '50vh' }}>
-                    <div style={{ marginBottom: '16px', color: '#000000' }}>
-                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-                            <path d="M12 21C12 21 3 14 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08C14.09 3.81 15.76 3 17.5 3C20.58 3 23 5.42 23 8.5C23 14 14 21 12 21Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-                        </svg>
-                    </div>
-                    <h2
-                        className="font-bold text-gray-900 mb-2"
-                        style={{ fontSize: '20px', fontFamily: 'Afacad, sans-serif' }}
-                    >
-                        No favorites yet
-                    </h2>
-                    <p
-                        className="text-gray-400 mb-6 text-center"
-                        style={{ fontSize: '14px', fontFamily: 'Afacad, sans-serif', maxWidth: '320px' }}
-                    >
-                        Click the ♥ on a game to save it here.
-                    </p>
+        <div className="flex flex-col gap-6">
+            <div>
+                <h1 className="font-bold" style={{ fontSize: '22px', color: 'var(--text-primary)' }}>My Favorites</h1>
+                {!loading && <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' }}>{favGames.length} saved game{favGames.length !== 1 ? 's' : ''}</p>}
+            </div>
+
+            {loading ? (
+                <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+                    {Array.from({ length: 6 }).map((_, i) => <GameCardSkeleton key={i} />)}
+                </div>
+            ) : favGames.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 gap-3">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 21C12 21 3 14 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08C14.09 3.81 15.76 3 17.5 3C20.58 3 23 5.42 23 8.5C23 14 14 21 12 21Z"
+                              stroke="var(--text-muted)" strokeWidth="1.5"/>
+                    </svg>
+                    <p style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>No favorites yet</p>
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Heart a game to save it here.</p>
+                    <button onClick={() => navigate('/')}
+                            style={{ padding: '8px 20px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '999px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
+                        Browse Games
+                    </button>
                 </div>
             ) : (
                 <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                    {favGames.map(g => (
-                        <GameCard key={g.id} game={g} onDetails={setSelectedGame} />
-                    ))}
+                    {favGames.map(game => <GameCard key={game.id} game={game} />)}
                 </div>
             )}
         </div>
