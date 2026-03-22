@@ -5,12 +5,12 @@ import type { Game } from '../../types'
 import api from '../../services/api'
 import Stars from '../../components/ui/Stars'
 
-type AdminTab = 'overview' | 'games' | 'users' | 'refunds'
+type AdminTab = 'overview' | 'games' | 'publishers' | 'users' | 'refunds'
 type RefundFilter = 'pending' | 'approved' | 'rejected' | 'all'
 
 const PLATFORMS = ['pc', 'playstation', 'ps5', 'xbox', 'switch']
 const GENRES_LIST = ['Action', 'Adventure', 'RPG', 'FPS', 'Sports', 'Horror', 'Racing', 'Platform', 'Simulation', 'Multiplayer']
-const emptyForm = { name: '', description: '', platform: 'pc', original_price: '', rental_price: '', rating: '', publisher: '', release_date: '', genre: [] as string[], is_featured: false, is_new: false }
+const emptyForm = { name: '', description: '', platform: 'pc', original_price: '', rental_price: '', rating: '', publisher_id: '', release_date: '', genre: [] as string[], is_featured: false, is_new: false, keys_to_add: '' }
 
 // ── Shared styles ────────────────────────────────────────────────
 const inputCls: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: '10px', fontSize: '13px', outline: 'none', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: 'inherit', boxSizing: 'border-box' }
@@ -44,6 +44,12 @@ export default function AdminPortal() {
     const [uSearch, setUSearch] = useState('')
     const [expandedUser, setExpandedUser] = useState<number | null>(null)
     const [resetSent, setResetSent] = useState<number | null>(null)
+    const [publishers, setPublishers] = useState<{ id: number; name: string }[]>([])
+    const [newPubName, setNewPubName] = useState('')
+    const [editPub, setEditPub] = useState<{ id: number; name: string } | null>(null)
+    const [editPubName, setEditPubName] = useState('')
+    const [deletePubConfirm, setDeletePubConfirm] = useState<number | null>(null)
+    const [pubSaving, setPubSaving] = useState(false)
     const [showModal, setShowModal] = useState(false)
     const [editGame, setEditGame] = useState<Game | null>(null)
     const [form, setForm] = useState(emptyForm)
@@ -56,18 +62,20 @@ export default function AdminPortal() {
 
     // fetch all on mount for overview stats
     useEffect(() => {
-        fetchGames(); fetchUsers(); fetchRefunds()
+        fetchGames(); fetchUsers(); fetchRefunds(); fetchPublishers()
     }, [])
 
     useEffect(() => {
-        if (tab === 'games') fetchGames()
+        if (tab === 'games') { fetchGames(); fetchPublishers() }
+        else if (tab === 'publishers') fetchPublishers()
         else if (tab === 'users') fetchUsers()
         else if (tab === 'refunds') fetchRefunds()
     }, [tab])
 
-    const fetchGames   = () => { setLoading(true); api.get('/games/', { params: { page_size: 100 } }).then(({ data }) => setGames(data.data ?? data)).finally(() => setLoading(false)) }
-    const fetchUsers   = () => api.get('/rentals/admin/users/').then(({ data }) => setUsers(data.data ?? data))
-    const fetchRefunds = () => api.get('/rentals/admin/refunds/').then(({ data }) => setRefunds(data.data ?? data))
+    const fetchGames      = () => { setLoading(true); api.get('/games/', { params: { page_size: 100 } }).then(({ data }) => setGames(data.data ?? data)).finally(() => setLoading(false)) }
+    const fetchUsers      = () => api.get('/rentals/admin/users/').then(({ data }) => setUsers(data.data ?? data))
+    const fetchRefunds    = () => api.get('/rentals/admin/refunds/').then(({ data }) => setRefunds(data.data ?? data))
+    const fetchPublishers = () => api.get('/games/publishers/').then(({ data }) => setPublishers(data.data ?? data))
 
     const pendingCount   = refunds.filter(r => r.status === 'pending').length
     const availableKeys  = games.reduce((s, g) => s + (g.available_keys || 0), 0)
@@ -76,13 +84,17 @@ export default function AdminPortal() {
     const openCreate = () => { setEditGame(null); setForm(emptyForm); setImageFile(null); setShowModal(true) }
     const openEdit = (g: Game) => {
         setEditGame(g)
-        setForm({ name: g.name, description: g.description, platform: g.platform, original_price: g.original_price, rental_price: g.rental_price, rating: g.rating, publisher: g.publisher?.name || '', release_date: g.release_date || '', genre: g.genre || [], is_featured: g.is_featured, is_new: g.is_new })
+        setForm({ name: g.name, description: g.description, platform: g.platform, original_price: g.original_price, rental_price: g.rental_price, rating: g.rating, publisher_id: g.publisher?.id ? String(g.publisher.id) : '', release_date: g.release_date || '', genre: g.genre || [], is_featured: g.is_featured, is_new: g.is_new, keys_to_add: '' })
         setImageFile(null); setShowModal(true)
     }
     const saveGame = async () => {
         setSaving(true)
         const fd = new FormData()
-        Object.entries(form).forEach(([k, v]) => { if (k === 'genre') fd.append(k, JSON.stringify(v)); else fd.append(k, String(v)) })
+        Object.entries(form).forEach(([k, v]) => {
+            if (k === 'genre') fd.append(k, JSON.stringify(v))
+            else if (k === 'keys_to_add' && (!v || Number(v) <= 0)) return
+            else fd.append(k, String(v))
+        })
         if (imageFile) fd.append('image', imageFile)
         try {
             if (editGame) await api.patch(`/games/admin/${editGame.id}/`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
@@ -102,15 +114,34 @@ export default function AdminPortal() {
         try { await api.post(`/rentals/admin/users/${userId}/send-reset/`); setResetSent(userId); setTimeout(() => setResetSent(null), 3000) } catch { alert('Failed to send.') }
     }
 
+    const createPub = async () => {
+        if (!newPubName.trim()) return
+        setPubSaving(true)
+        try { await api.post('/games/publishers/admin/create/', { name: newPubName }); setNewPubName(''); fetchPublishers() }
+        catch (e: any) { alert(e?.response?.data?.error?.message || 'Falha ao criar publisher.') }
+        finally { setPubSaving(false) }
+    }
+    const savePub = async () => {
+        if (!editPub || !editPubName.trim()) return
+        try { await api.patch(`/games/publishers/admin/${editPub.id}/`, { name: editPubName }); setEditPub(null); fetchPublishers() }
+        catch (e: any) { alert(e?.response?.data?.error?.message || 'Falha ao salvar.') }
+    }
+    const deletePub = async (id: number) => {
+        try { await api.delete(`/games/publishers/admin/${id}/`); fetchPublishers() }
+        catch { alert('Falha ao deletar publisher.') }
+        finally { setDeletePubConfirm(null) }
+    }
+
     const filteredGames   = games.filter(g => g.name.toLowerCase().includes(gSearch.toLowerCase()))
     const filteredUsers   = users.filter(u => u.username?.toLowerCase().includes(uSearch.toLowerCase()) || u.email?.toLowerCase().includes(uSearch.toLowerCase()))
     const filteredRefunds = refunds.filter(r => refundFilter === 'all' || r.status === refundFilter)
 
     const TABS: { id: AdminTab; label: string; icon: React.ReactNode; badge?: number }[] = [
-        { id: 'overview', label: 'Overview', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/></svg> },
-        { id: 'games',    label: 'Games',    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="3" stroke="currentColor" strokeWidth="1.8"/><path d="M8 12H10M9 11V13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><circle cx="15" cy="12" r="1.3" fill="currentColor"/><circle cx="17" cy="10" r="1.3" fill="currentColor"/></svg>, badge: games.length },
-        { id: 'users',    label: 'Users',    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M2 21c0-4 3.13-7 7-7s7 3 7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M19 11v6M22 14h-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>, badge: users.length },
-        { id: 'refunds',  label: 'Refunds',  icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 109 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M3 12V6M3 12H9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>, badge: pendingCount },
+        { id: 'overview',    label: 'Overview',    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/></svg> },
+        { id: 'games',       label: 'Games',       icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="3" stroke="currentColor" strokeWidth="1.8"/><path d="M8 12H10M9 11V13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><circle cx="15" cy="12" r="1.3" fill="currentColor"/><circle cx="17" cy="10" r="1.3" fill="currentColor"/></svg>, badge: games.length },
+        { id: 'publishers',  label: 'Publishers',  icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M9 22V12h6v10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>, badge: publishers.length },
+        { id: 'users',       label: 'Users',       icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M2 21c0-4 3.13-7 7-7s7 3 7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M19 11v6M22 14h-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>, badge: users.length },
+        { id: 'refunds',     label: 'Refunds',     icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 109 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M3 12V6M3 12H9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>, badge: pendingCount },
     ]
 
     return (
@@ -358,6 +389,86 @@ export default function AdminPortal() {
             )}
 
             {/* ══════════════════════════════════════════════════════
+                PUBLISHERS TAB
+            ══════════════════════════════════════════════════════ */}
+            {tab === 'publishers' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {/* Add publisher form */}
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px' }}>
+                        <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '14px' }}>Novo Publisher</h3>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <input value={newPubName} onChange={e => setNewPubName(e.target.value)}
+                                   placeholder="Nome do publisher / estúdio..."
+                                   style={{ ...inputCls, flex: 1 }}
+                                   onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                                   onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+                                   onKeyDown={e => e.key === 'Enter' && createPub()} />
+                            <button onClick={createPub} disabled={pubSaving || !newPubName.trim()} style={{
+                                display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 18px',
+                                background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '999px',
+                                fontWeight: 600, fontSize: '13px', cursor: pubSaving || !newPubName.trim() ? 'not-allowed' : 'pointer',
+                                opacity: pubSaving || !newPubName.trim() ? 0.5 : 1, fontFamily: 'inherit', whiteSpace: 'nowrap',
+                            }}>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                                {pubSaving ? 'Salvando...' : 'Adicionar'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Publishers list */}
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
+                        <div style={{ padding: '14px 20px', background: 'var(--bg)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Publisher</span>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Ações</span>
+                        </div>
+                        {publishers.length === 0 ? (
+                            <div style={{ padding: '48px', textAlign: 'center' }}>
+                                <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Nenhum publisher cadastrado.</p>
+                            </div>
+                        ) : publishers.map((p, i) => (
+                            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 20px', borderBottom: i < publishers.length - 1 ? '1px solid var(--border-light)' : 'none' }}>
+                                {/* Icon */}
+                                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="var(--accent)" strokeWidth="1.8"/><path d="M9 22V12h6v10" stroke="var(--accent)" strokeWidth="1.8"/></svg>
+                                </div>
+                                {/* Name or edit input */}
+                                {editPub?.id === p.id ? (
+                                    <input value={editPubName} onChange={e => setEditPubName(e.target.value)}
+                                           style={{ ...inputCls, flex: 1 }}
+                                           onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                                           onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+                                           onKeyDown={e => { if (e.key === 'Enter') savePub(); if (e.key === 'Escape') setEditPub(null) }}
+                                           autoFocus />
+                                ) : (
+                                    <span style={{ flex: 1, fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</span>
+                                )}
+                                {/* Actions */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                    {editPub?.id === p.id ? (
+                                        <>
+                                            <button onClick={savePub} style={{ padding: '5px 12px', fontSize: '12px', fontWeight: 600, background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit' }}>Salvar</button>
+                                            <button onClick={() => setEditPub(null)} style={{ padding: '5px 10px', fontSize: '12px', background: 'var(--bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer' }}>✕</button>
+                                        </>
+                                    ) : deletePubConfirm === p.id ? (
+                                        <>
+                                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Confirmar?</span>
+                                            <button onClick={() => deletePub(p.id)} style={{ padding: '5px 12px', fontSize: '12px', fontWeight: 600, background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit' }}>Deletar</button>
+                                            <button onClick={() => setDeletePubConfirm(null)} style={{ padding: '5px 10px', fontSize: '12px', background: 'var(--bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer' }}>✕</button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button onClick={() => { setEditPub(p); setEditPubName(p.name) }} style={{ padding: '5px 12px', fontSize: '12px', fontWeight: 600, background: 'var(--bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit' }}>Editar</button>
+                                            <button onClick={() => setDeletePubConfirm(p.id)} style={{ padding: '5px 12px', fontSize: '12px', fontWeight: 600, background: 'rgba(217,48,37,0.06)', color: 'var(--danger)', border: '1px solid rgba(217,48,37,0.15)', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit' }}>Deletar</button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════════
                 USERS TAB
             ══════════════════════════════════════════════════════ */}
             {tab === 'users' && (
@@ -557,15 +668,32 @@ export default function AdminPortal() {
                             </div>
                         </div>
 
+                        {/* Publisher dropdown */}
+                        <div>
+                            <label style={labelCls}>Publisher</label>
+                            <select value={form.publisher_id} onChange={e => setForm(f => ({ ...f, publisher_id: e.target.value }))}
+                                    style={{ ...inputCls, cursor: 'pointer' }}
+                                    onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                                    onBlur={e => (e.target.style.borderColor = 'var(--border)')}>
+                                <option value="">— Selecione um publisher —</option>
+                                {publishers.map(p => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
+                            </select>
+                            {publishers.length === 0 && (
+                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                    Nenhum publisher cadastrado. <button onClick={() => { setShowModal(false); setTab('publishers') }} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0, fontSize: '11px', fontFamily: 'inherit' }}>Cadastrar agora →</button>
+                                </p>
+                            )}
+                        </div>
+
                         {/* Fields grid */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                             {[
                                 { label: 'Game Name', key: 'name', type: 'text', placeholder: 'e.g. God of War' },
-                                { label: 'Publisher', key: 'publisher', type: 'text', placeholder: 'e.g. Sony Interactive' },
                                 { label: 'Original Price (R$)', key: 'original_price', type: 'number', placeholder: '299.90' },
                                 { label: 'Rental Price / day (R$)', key: 'rental_price', type: 'number', placeholder: '9.99' },
                                 { label: 'Rating (0–5)', key: 'rating', type: 'number', placeholder: '4.5' },
                                 { label: 'Release Date', key: 'release_date', type: 'date', placeholder: '' },
+                                { label: editGame ? 'Keys to Add' : 'Initial Keys', key: 'keys_to_add', type: 'number', placeholder: editGame ? 'e.g. 10' : 'e.g. 50' },
                             ].map(({ label, key, type, placeholder }) => (
                                 <div key={key}>
                                     <label style={labelCls}>{label}</label>
