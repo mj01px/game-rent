@@ -111,7 +111,7 @@ export default function Home() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
                             <div style={{ textAlign: 'right' }}>
                                 <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.2 }}>
-                                    R${parseFloat(hero.rental_price).toFixed(2)}
+                                    ${parseFloat(hero.rental_price).toFixed(2)}
                                     <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--text-muted)', marginLeft: '2px' }}>/dia</span>
                                 </p>
                                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
@@ -199,7 +199,7 @@ export default function Home() {
                                 </span>
                             </div>
                             <p style={{ fontSize: '20px', fontWeight: 600, color: '#FFFFFF', marginBottom: '22px' }}>
-                                R${parseFloat(hero.rental_price).toFixed(2)}
+                                ${parseFloat(hero.rental_price).toFixed(2)}
                                 <span style={{ fontSize: '13px', fontWeight: 400, color: 'rgba(255,255,255,0.6)', marginLeft: '4px' }}>/dia</span>
                             </p>
                             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>

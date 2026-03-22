@@ -167,7 +167,7 @@ export default function GameCard({ game }: { game: Game }) {
                 <div style={{ marginTop: 'auto' }}>
                     {/* Price */}
                     <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
-                        R${parseFloat(game.rental_price).toFixed(2)}
+                        ${parseFloat(game.rental_price).toFixed(2)}
                         <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--text-muted)', marginLeft: '2px' }}>/dia</span>
                     </p>
 

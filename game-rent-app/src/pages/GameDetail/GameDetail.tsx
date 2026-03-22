@@ -292,12 +292,12 @@ export default function GameDetail() {
                         <div>
                             <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '4px' }}>
                                 <span style={{ fontSize: '28px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>
-                                    R${parseFloat(game.rental_price).toFixed(2)}
+                                    ${parseFloat(game.rental_price).toFixed(2)}
                                 </span>
                                 <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 400 }}>/day</span>
                             </div>
                             <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                                Original price: <span style={{ textDecoration: 'line-through' }}>R${parseFloat(game.original_price).toFixed(2)}</span>
+                                Original price: <span style={{ textDecoration: 'line-through' }}>${parseFloat(game.original_price).toFixed(2)}</span>
                             </p>
                         </div>
 

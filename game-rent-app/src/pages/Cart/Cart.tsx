@@ -105,10 +105,10 @@ export default function Cart() {
                                 </div>
                                 <div className="flex items-center justify-between mt-1">
                                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                                        R${pricePerDay.toFixed(2)}/dia × {duration} dias
+                                        ${pricePerDay.toFixed(2)}/dia × {duration} dias
                                     </span>
                                     <span className="font-bold" style={{ fontSize: '15px', color: 'var(--text-primary)' }}>
-                                        R${total.toFixed(2)}
+                                        ${total.toFixed(2)}
                                     </span>
                                 </div>
                             </div>
@@ -127,7 +127,7 @@ export default function Cart() {
                         <div key={game.id} className="flex items-center justify-between gap-2">
                             <span className="truncate" style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '160px' }}>{game.name}</span>
                             <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                                R${(parseFloat(game.rental_price) * duration).toFixed(2)}
+                                ${(parseFloat(game.rental_price) * duration).toFixed(2)}
                             </span>
                         </div>
                     ))}
@@ -136,7 +136,7 @@ export default function Cart() {
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
                     <div className="flex items-center justify-between">
                         <span className="font-bold" style={{ fontSize: '15px', color: 'var(--text-primary)' }}>Total</span>
-                        <span className="font-bold" style={{ fontSize: '18px', color: 'var(--accent)' }}>R${cartTotal.toFixed(2)}</span>
+                        <span className="font-bold" style={{ fontSize: '18px', color: 'var(--accent)' }}>${cartTotal.toFixed(2)}</span>
                     </div>
                 </div>
 
