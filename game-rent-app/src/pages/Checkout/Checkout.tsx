@@ -188,7 +188,7 @@ export default function Checkout() {
                             <div key={game.id} className="flex items-center justify-between gap-2">
                                 <span className="truncate" style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '160px' }}>{game.name}</span>
                                 <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                                    R${(parseFloat(game.rental_price) * duration).toFixed(2)}
+                                    ${(parseFloat(game.rental_price) * duration).toFixed(2)}
                                 </span>
                             </div>
                         ))}
@@ -197,7 +197,7 @@ export default function Checkout() {
                     <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
                         <div className="flex items-center justify-between">
                             <span className="font-bold" style={{ fontSize: '15px', color: 'var(--text-primary)' }}>Total</span>
-                            <span className="font-bold" style={{ fontSize: '20px', color: 'var(--accent)' }}>R${cartTotal.toFixed(2)}</span>
+                            <span className="font-bold" style={{ fontSize: '20px', color: 'var(--accent)' }}>${cartTotal.toFixed(2)}</span>
                         </div>
                     </div>
 
@@ -212,7 +212,7 @@ export default function Checkout() {
                             opacity: loading || !cardValid ? 0.5 : 1, fontSize: '15px',
                         }}
                     >
-                        {loading ? 'Processing...' : `Confirm & Pay · R$${cartTotal.toFixed(2)}`}
+                        {loading ? 'Processing...' : `Confirm & Pay · $${cartTotal.toFixed(2)}`}
                     </button>
 
                     <p style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>

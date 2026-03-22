@@ -113,7 +113,7 @@ export default function MyGames() {
                             {[
                                 { label: 'Started', value: new Date(rental.started_at).toLocaleDateString('pt-BR') },
                                 { label: 'Expires', value: new Date(rental.expires_at).toLocaleDateString('pt-BR') },
-                                { label: 'Total Paid', value: `R$${parseFloat(rental.total_paid).toFixed(2)}` },
+                                { label: 'Total Paid', value: `$${parseFloat(rental.total_paid).toFixed(2)}` },
                                 { label: 'Status', value: rental.status === 'active' ? 'Active' : 'Expired' },
                             ].map(({ label, value }) => (
                                 <div key={label} className="rounded-xl p-3" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>

@@ -258,7 +258,7 @@ export default function AdminPortal() {
                                         <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.game_name}</p>
-                                                <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>by {r.user_username} · R${parseFloat(r.total_paid || 0).toFixed(2)}</p>
+                                                <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>by {r.user_username} · ${parseFloat(r.total_paid || 0).toFixed(2)}</p>
                                             </div>
                                             <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                                                 <button onClick={() => resolveRefund(r.id, 'approve')} style={{ padding: '4px 8px', fontSize: '11px', fontWeight: 600, background: 'rgba(30,142,62,0.1)', color: 'var(--success)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontFamily: 'inherit' }}>✓</button>
@@ -335,7 +335,7 @@ export default function AdminPortal() {
                                         </td>
                                         {/* Price */}
                                         <td style={{ padding: '12px 16px', verticalAlign: 'middle', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                                            R${parseFloat(g.rental_price).toFixed(2)}
+                                            ${parseFloat(g.rental_price).toFixed(2)}
                                         </td>
                                         {/* Rating */}
                                         <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
@@ -601,7 +601,7 @@ export default function AdminPortal() {
                                     </div>
                                     <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                                         by <strong style={{ color: 'var(--text-secondary)' }}>{r.user_username}</strong>
-                                        {' · '}R${parseFloat(r.total_paid || 0).toFixed(2)} paid
+                                        {' · '}${parseFloat(r.total_paid || 0).toFixed(2)} paid
                                     </p>
                                     {r.reason && (
                                         <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', fontStyle: 'italic' }}>"{r.reason}"</p>
@@ -689,8 +689,8 @@ export default function AdminPortal() {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                             {[
                                 { label: 'Game Name', key: 'name', type: 'text', placeholder: 'e.g. God of War' },
-                                { label: 'Original Price (R$)', key: 'original_price', type: 'number', placeholder: '299.90' },
-                                { label: 'Rental Price / day (R$)', key: 'rental_price', type: 'number', placeholder: '9.99' },
+                                { label: 'Original Price ($)', key: 'original_price', type: 'number', placeholder: '299.90' },
+                                { label: 'Rental Price / day ($)', key: 'rental_price', type: 'number', placeholder: '9.99' },
                                 { label: 'Rating (0–5)', key: 'rating', type: 'number', placeholder: '4.5' },
                                 { label: 'Release Date', key: 'release_date', type: 'date', placeholder: '' },
                                 { label: editGame ? 'Keys to Add' : 'Initial Keys', key: 'keys_to_add', type: 'number', placeholder: editGame ? 'e.g. 10' : 'e.g. 50' },
