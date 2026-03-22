@@ -1,3 +1,4 @@
+import magic
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -34,7 +35,16 @@ from .services import (
     upload_avatar,
 )
 
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
+
+# Throttle Security
+
+class AuthThrottle(AnonRateThrottle):
+    scope = 'auth'
+
+class EmailSpamThrottle(AnonRateThrottle):
+    scope = 'email_spam'
 # ─── AUTH ─────────────────────────────────────────────────────────────────────
 
 class RegisterView(APIView):
@@ -107,6 +117,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class CustomLoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+    throttle_classes = [AuthThrottle]
 
 
 # ─── PROFILE ──────────────────────────────────────────────────────────────────
@@ -185,6 +196,27 @@ class AvatarUploadView(APIView):
                 message="Nenhum arquivo enviado.",
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
+
+        # 1. Validação de Tamanho (Máximo de 2MB)
+        if image.size > 2 * 1024 * 1024:
+            return api_error(
+                code="FILE_TOO_LARGE",
+                message="A imagem deve ter no máximo 2MB.",
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 2. Validação de Tipo de Arquivo (Magic Bytes)
+        file_header = image.read(2048)
+        image.seek(0)  # Retorna o ponteiro para o início para salvar depois
+        mime_type = magic.from_buffer(file_header, mime=True)
+
+        if mime_type not in ['image/jpeg', 'image/png', 'image/webp']:
+            return api_error(
+                code="INVALID_FILE_TYPE",
+                message="Apenas imagens JPG, PNG ou WEBP são permitidas.",
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
         profile = upload_avatar(user=request.user, image=image)
         return api_response(
             data={"avatar": request.build_absolute_uri(profile.avatar.url)}
@@ -229,6 +261,7 @@ class ForgotPasswordView(APIView):
     """Envia link de reset de senha para o email informado (sem autenticação)."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [EmailSpamThrottle]
 
     def post(self, request: Request) -> Response:
         serializer = ForgotPasswordSerializer(data=request.data)
@@ -316,6 +349,7 @@ class ResendVerificationView(APIView):
     """Reenvia o email de verificação para o usuário autenticado."""
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [EmailSpamThrottle]
 
     def post(self, request: Request) -> Response:
         profile = get_profile(request.user)
