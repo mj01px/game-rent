@@ -6,10 +6,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.permissions import IsAdminUser
-from core.responses import api_response
+from core.responses import api_error, api_response
+from .models import Publisher
 from .selectors import get_game_by_id, get_game_list
-from .serializers import GameSerializer
-from .services import create_game, delete_game, update_game
+from .serializers import GameSerializer, PublisherSerializer
+from .services import (
+    create_game, create_publisher, delete_game, delete_publisher,
+    update_game, update_publisher,
+)
 
 
 class GameListView(generics.ListAPIView):
@@ -79,4 +83,61 @@ class AdminGameDetailView(APIView):
     def delete(self, request: Request, pk: int) -> Response:
         game = get_game_by_id(pk)
         delete_game(game)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PublisherListView(generics.ListAPIView):
+    """Lista pública de publishers ordenada por nome."""
+
+    serializer_class = PublisherSerializer
+    permission_classes = [AllowAny]
+    queryset = Publisher.objects.all().order_by("name")
+
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return api_response(data=serializer.data)
+
+
+class AdminPublisherCreateView(APIView):
+    """Cria um publisher (admin)."""
+
+    permission_classes = [IsAdminUser]
+
+    def post(self, request: Request) -> Response:
+        name = request.data.get("name", "").strip()
+        if not name:
+            return api_error("VALIDATION_ERROR", "O campo name é obrigatório.", status_code=status.HTTP_400_BAD_REQUEST)
+        try:
+            publisher = create_publisher(name)
+        except ValueError as e:
+            return api_error("CONFLICT", str(e), status_code=status.HTTP_409_CONFLICT)
+        return api_response(data=PublisherSerializer(publisher).data, status_code=status.HTTP_201_CREATED)
+
+
+class AdminPublisherDetailView(APIView):
+    """Atualiza ou remove um publisher (admin)."""
+
+    permission_classes = [IsAdminUser]
+
+    def patch(self, request: Request, pk: int) -> Response:
+        try:
+            publisher = Publisher.objects.get(pk=pk)
+        except Publisher.DoesNotExist:
+            return api_error("NOT_FOUND", "Publisher não encontrado.", status_code=status.HTTP_404_NOT_FOUND)
+        name = request.data.get("name", "").strip()
+        if not name:
+            return api_error("VALIDATION_ERROR", "O campo name é obrigatório.", status_code=status.HTTP_400_BAD_REQUEST)
+        try:
+            publisher = update_publisher(publisher, name)
+        except ValueError as e:
+            return api_error("CONFLICT", str(e), status_code=status.HTTP_409_CONFLICT)
+        return api_response(data=PublisherSerializer(publisher).data)
+
+    def delete(self, request: Request, pk: int) -> Response:
+        try:
+            publisher = Publisher.objects.get(pk=pk)
+        except Publisher.DoesNotExist:
+            return api_error("NOT_FOUND", "Publisher não encontrado.", status_code=status.HTTP_404_NOT_FOUND)
+        delete_publisher(publisher)
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -18,6 +18,16 @@ def _resolve_publisher(publisher_name: str | None) -> Publisher | None:
     return publisher
 
 
+def _get_publisher_by_id(publisher_id: str | int | None) -> Publisher | None:
+    """Retorna Publisher pelo ID ou None se não encontrado/não fornecido."""
+    if not publisher_id:
+        return None
+    try:
+        return Publisher.objects.get(pk=int(publisher_id))
+    except (Publisher.DoesNotExist, ValueError, TypeError):
+        return None
+
+
 def _parse_genre(genre_raw: str | list | None) -> list:
     """Converte genre de JSON string ou lista para list Python."""
     if genre_raw is None:
@@ -55,7 +65,7 @@ def create_game(data: dict, image=None) -> Game:
     Returns:
         Game recém-criado.
     """
-    publisher = _resolve_publisher(data.get("publisher_name"))
+    publisher = _get_publisher_by_id(data.get("publisher_id")) or _resolve_publisher(data.get("publisher_name"))
 
     game = Game(
         name=data["name"],
@@ -89,9 +99,10 @@ def update_game(game: Game, data: dict, image=None) -> Game:
 
     Apenas campos presentes em data são alterados.
     """
-    publisher_name = data.get("publisher_name", "").strip()
-    if publisher_name:
-        game.publisher = _resolve_publisher(publisher_name)
+    if data.get("publisher_id"):
+        game.publisher = _get_publisher_by_id(data["publisher_id"])
+    elif data.get("publisher_name", "").strip():
+        game.publisher = _resolve_publisher(data["publisher_name"])
 
     genre_raw = data.get("genre")
     if genre_raw is not None:
@@ -148,3 +159,36 @@ def add_game_keys(game: Game, quantity: int) -> list[GameKey]:
 def delete_game(game: Game) -> None:
     """Remove um jogo e todas as suas chaves (CASCADE no model)."""
     game.delete()
+
+
+# ---------------------------------------------------------------------------
+# Publisher services
+# ---------------------------------------------------------------------------
+
+def create_publisher(name: str) -> Publisher:
+    """Cria um publisher com o nome fornecido.
+
+    Raises:
+        ValueError: se o nome já existir.
+    """
+    if Publisher.objects.filter(name=name.strip()).exists():
+        raise ValueError(f"Publisher '{name.strip()}' já existe.")
+    return Publisher.objects.create(name=name.strip())
+
+
+def update_publisher(publisher: Publisher, name: str) -> Publisher:
+    """Atualiza o nome de um publisher.
+
+    Raises:
+        ValueError: se outro publisher com esse nome já existir.
+    """
+    if Publisher.objects.filter(name=name.strip()).exclude(pk=publisher.pk).exists():
+        raise ValueError(f"Publisher '{name.strip()}' já existe.")
+    publisher.name = name.strip()
+    publisher.save()
+    return publisher
+
+
+def delete_publisher(publisher: Publisher) -> None:
+    """Remove um publisher (jogos vinculados ficam sem publisher)."""
+    publisher.delete()
