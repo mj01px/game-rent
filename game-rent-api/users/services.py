@@ -12,6 +12,11 @@ from core.validators import validate_password_strength
 from .models import Favorite, ProfileChangeToken, UserProfile
 from .selectors import get_token_info
 
+import logging
+
+
+logger = logging.getLogger(__name__)
+
 
 # ---------------------------------------------------------------------------
 # Helpers internos
@@ -72,8 +77,9 @@ def register_user(username: str, email: str, password: str) -> tuple[User, dict]
 
     try:
         send_verification_email(user)
-    except Exception:
-        pass  # Não bloqueia o registro se o envio de email falhar
+    except Exception as e:
+        # Registra o erro detalhado nos logs do servidor em vez de usar 'pass'
+        logger.error(f"Falha ao enviar e-mail de verificação para {email}", exc_info=True)
 
     refresh = RefreshToken.for_user(user)
     return user, {
