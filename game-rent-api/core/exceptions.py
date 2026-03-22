@@ -65,7 +65,7 @@ class InvalidToken(APIException):
 class EmailAlreadyInUse(APIException):
     status_code = status.HTTP_409_CONFLICT
     default_code = "email_already_in_use"
-    default_detail = "Este email já está em uso."
+    default_detsail = "Este email já está em uso."
 
 
 class UsernameAlreadyInUse(APIException):
@@ -78,3 +78,9 @@ class EmailNotVerified(APIException):
     status_code = status.HTTP_403_FORBIDDEN
     default_code = "email_not_verified"
     default_detail = "Email não verificado. Verifique sua caixa de entrada."
+
+
+class InvalidRentalDuration(APIException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_code = "invalid_rental_duration"
+    default_detail = "A duração do aluguel deve ser entre 1 e 30 dias."

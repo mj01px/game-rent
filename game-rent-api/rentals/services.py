@@ -9,6 +9,7 @@ from core.exceptions import (
     RefundAlreadyRequested,
     RefundNotResolvable,
     RentalNotRefundable,
+    InvalidRentalDuration,
 )
 from games.selectors import get_game_by_id
 from .models import RefundRequest, Rental
@@ -34,6 +35,10 @@ def create_rental(user: User, game_id: int, rental_days: int) -> Rental:
         GameNotFound: se o jogo não existir.
         NoKeysAvailable: se não houver chaves disponíveis.
     """
+
+    if not (1 <= rental_days <= 30):
+        raise InvalidRentalDuration()
+
     game = get_game_by_id(game_id)
 
     key = (
