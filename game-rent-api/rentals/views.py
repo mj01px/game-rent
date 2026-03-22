@@ -72,16 +72,28 @@ class RentalDetailView(generics.RetrieveAPIView):
         return api_response(data=serializer.data)
 
 
+# rentals/views.py
+
 class RequestRefundView(APIView):
     """Solicita reembolso de um aluguel."""
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request, pk: int) -> Response:
+        reason = request.data.get("reason", "")
+
+        # DEFESA: Limite de tamanho
+        if len(reason) > 500:
+            return api_error(
+                code="REASON_TOO_LONG",
+                message="O motivo deve ter no máximo 500 caracteres.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
         request_refund(
             user=request.user,
             rental_id=pk,
-            reason=request.data.get("reason", ""),
+            reason=reason,
         )
         return api_response(
             data={"detail": "Solicitação de reembolso enviada. Aguardando aprovação."},
