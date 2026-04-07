@@ -17,7 +17,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 def _create_token(user: User, change_type: str, new_value: str = "") -> str:
-    """Cria (ou substitui) um ProfileChangeToken e retorna o token string."""
     token = str(uuid.uuid4())
     ProfileChangeToken.objects.filter(user=user, change_type=change_type).delete()
     ProfileChangeToken.objects.create(
@@ -38,21 +37,6 @@ def _send_email(subject: str, message: str, recipient: str) -> None:
 
 @transaction.atomic
 def register_user(username: str, email: str, password: str) -> tuple[User, dict]:
-    """Cria um novo usuário com perfil e envia email de verificação.
-
-    Args:
-        username: nome de usuário desejado.
-        email: email do usuário.
-        password: senha em texto plano (será hasheada).
-
-    Returns:
-        Tupla (user, tokens) onde tokens contém "access" e "refresh".
-
-    Raises:
-        UsernameAlreadyInUse: se o username já existe.
-        EmailAlreadyInUse: se o email já está em uso.
-        DjangoValidationError: se a senha não atende aos requisitos.
-    """
     if User.objects.filter(username=username).exists():
         raise UsernameAlreadyInUse()
     if User.objects.filter(email=email).exists():
@@ -75,7 +59,6 @@ def register_user(username: str, email: str, password: str) -> tuple[User, dict]
     }
 
 def send_verification_email(user: User) -> None:
-    """Cria token de verificação de email e envia o link para o usuário."""
     token = _create_token(user, "verify")
     confirm_url = f"{settings.FRONTEND_URL}/confirm-change?token={token}&type=verify"
     _send_email(
@@ -91,11 +74,6 @@ def send_verification_email(user: User) -> None:
     )
 
 def confirm_email_verification(token_str: str) -> None:
-    """Marca o email do usuário como verificado e apaga o token.
-
-    Raises:
-        InvalidToken: se o token não existir.
-    """
     token_obj = get_token_info(token_str, "verify")
     profile, _ = UserProfile.objects.get_or_create(user=token_obj.user)
     profile.is_verified = True
@@ -103,11 +81,6 @@ def confirm_email_verification(token_str: str) -> None:
     token_obj.delete()
 
 def request_email_change(user: User, new_email: str) -> None:
-    """Passo 1: valida o novo email e envia link de confirmação para o email atual.
-
-    Raises:
-        EmailAlreadyInUse: se o novo email já está em uso.
-    """
     if User.objects.filter(email=new_email).exists():
         raise EmailAlreadyInUse()
 
@@ -128,14 +101,6 @@ def request_email_change(user: User, new_email: str) -> None:
     )
 
 def confirm_email_change(token_str: str) -> str:
-    """Passo 2: usuário confirmou — envia link de verificação para o novo email.
-
-    Returns:
-        O novo email para o qual o link foi enviado.
-
-    Raises:
-        InvalidToken: se o token não existir.
-    """
     token_obj = get_token_info(token_str, "email")
     new_email = token_obj.new_value
 
@@ -159,11 +124,6 @@ def confirm_email_change(token_str: str) -> str:
     return new_email
 
 def confirm_new_email(token_str: str) -> None:
-    """Passo 3: aplica efetivamente a troca de email.
-
-    Raises:
-        InvalidToken: se o token não existir.
-    """
     token_obj = get_token_info(token_str, "email_new")
     user = token_obj.user
     user.email = token_obj.new_value
@@ -171,7 +131,6 @@ def confirm_new_email(token_str: str) -> None:
     token_obj.delete()
 
 def request_password_change(user: User) -> None:
-    """Envia link de troca de senha para o email do usuário autenticado."""
     token = _create_token(user, "password")
     confirm_url = f"{settings.FRONTEND_URL}/confirm-change?token={token}&type=password"
     _send_email(
@@ -187,10 +146,6 @@ def request_password_change(user: User) -> None:
     )
 
 def forgot_password(email: str) -> None:
-    """Envia link de reset de senha para o email informado.
-
-    Não revela se o email existe (proteção contra enumeração de contas).
-    """
     try:
         user = User.objects.get(email=email)
     except User.DoesNotExist:
@@ -211,12 +166,6 @@ def forgot_password(email: str) -> None:
     )
 
 def confirm_password_change(token_str: str, new_password: str) -> None:
-    """Aplica a troca de senha após validar o token e a força da senha.
-
-    Raises:
-        InvalidToken: se o token não existir.
-        DjangoValidationError: se a senha não atende aos requisitos.
-    """
     token_obj = get_token_info(token_str, "password")
     validate_password_strength(new_password)
     user = token_obj.user
@@ -225,10 +174,6 @@ def confirm_password_change(token_str: str, new_password: str) -> None:
     token_obj.delete()
 
 def send_password_reset_email(user: User) -> None:
-    """Envia link de reset de senha para um usuário (acionado pelo admin).
-
-    Movido de rentals/views.AdminSendPasswordResetView.
-    """
     token = _create_token(user, "password")
     confirm_url = f"{settings.FRONTEND_URL}/confirm-change?token={token}&type=password"
     _send_email(
@@ -243,11 +188,6 @@ def send_password_reset_email(user: User) -> None:
     )
 
 def update_username(user: User, new_username: str) -> User:
-    """Troca o username do usuário.
-
-    Raises:
-        UsernameAlreadyInUse: se o username já está em uso por outro usuário.
-    """
     if User.objects.filter(username=new_username).exclude(pk=user.pk).exists():
         raise UsernameAlreadyInUse()
     user.username = new_username
@@ -255,16 +195,13 @@ def update_username(user: User, new_username: str) -> User:
     return user
 
 def upload_avatar(user: User, image) -> UserProfile:
-    """Atualiza ou cria o avatar do usuário."""
     profile, _ = UserProfile.objects.get_or_create(user=user)
     profile.avatar = image
     profile.save(update_fields=["avatar"])
     return profile
 
 def add_favorite(user: User, game_id: int) -> None:
-    """Adiciona um jogo aos favoritos do usuário (idempotente)."""
     Favorite.objects.get_or_create(user=user, game_id=game_id)
 
 def remove_favorite(user: User, game_id: int) -> None:
-    """Remove um jogo dos favoritos do usuário."""
     Favorite.objects.filter(user=user, game_id=game_id).delete()

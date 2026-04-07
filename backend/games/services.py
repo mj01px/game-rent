@@ -6,14 +6,12 @@ from django.db import transaction
 from .models import Game, GameKey, Publisher
 
 def _resolve_publisher(publisher_name: str | None) -> Publisher | None:
-    """Busca ou cria um publisher pelo nome. Retorna None se nome vazio."""
     if not publisher_name or not publisher_name.strip():
         return None
     publisher, _ = Publisher.objects.get_or_create(name=publisher_name.strip())
     return publisher
 
 def _get_publisher_by_id(publisher_id: str | int | None) -> Publisher | None:
-    """Retorna Publisher pelo ID ou None se não encontrado/não fornecido."""
     if not publisher_id:
         return None
     try:
@@ -22,7 +20,6 @@ def _get_publisher_by_id(publisher_id: str | int | None) -> Publisher | None:
         return None
 
 def _parse_genre(genre_raw: str | list | None) -> list:
-    """Converte genre de JSON string ou lista para list Python."""
     if genre_raw is None:
         return []
     if isinstance(genre_raw, list):
@@ -33,7 +30,6 @@ def _parse_genre(genre_raw: str | list | None) -> list:
         return []
 
 def _parse_bool(value: str | bool | None, default: bool = False) -> bool:
-    """Converte string "true"/"false" (vinda de multipart) para bool."""
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
@@ -42,16 +38,6 @@ def _parse_bool(value: str | bool | None, default: bool = False) -> bool:
 
 @transaction.atomic
 def create_game(data: dict, image=None) -> Game:
-    """Cria um jogo com publisher resolvido e gera chaves iniciais.
-
-    Args:
-        data: campos do formulário (incluindo publisher_name, genre como JSON
-              string, is_featured/is_new como string, keys_to_add como int).
-        image: arquivo de imagem do request.FILES, ou None.
-
-    Returns:
-        Game recém-criado.
-    """
     publisher = _get_publisher_by_id(data.get("publisher_id")) or _resolve_publisher(data.get("publisher_name"))
 
     game = Game(
@@ -81,10 +67,6 @@ def create_game(data: dict, image=None) -> Game:
 
 @transaction.atomic
 def update_game(game: Game, data: dict, image=None) -> Game:
-    """Atualiza campos de um jogo existente (PATCH semântico).
-
-    Apenas campos presentes em data são alterados.
-    """
     if data.get("publisher_id"):
         game.publisher = _get_publisher_by_id(data["publisher_id"])
     elif data.get("publisher_name", "").strip():
@@ -125,15 +107,6 @@ def update_game(game: Game, data: dict, image=None) -> Game:
     return game
 
 def add_game_keys(game: Game, quantity: int) -> list[GameKey]:
-    """Cria N chaves disponíveis para um jogo via bulk_create.
-
-    Args:
-        game: jogo ao qual as chaves serão associadas.
-        quantity: número de chaves a criar.
-
-    Returns:
-        Lista de GameKeys criadas.
-    """
     keys = [
         GameKey(game=game, key=str(uuid.uuid4()), status="available")
         for _ in range(quantity)
@@ -141,25 +114,14 @@ def add_game_keys(game: Game, quantity: int) -> list[GameKey]:
     return GameKey.objects.bulk_create(keys)
 
 def delete_game(game: Game) -> None:
-    """Remove um jogo e todas as suas chaves (CASCADE no model)."""
     game.delete()
 
 def create_publisher(name: str) -> Publisher:
-    """Cria um publisher com o nome fornecido.
-
-    Raises:
-        ValueError: se o nome já existir.
-    """
     if Publisher.objects.filter(name=name.strip()).exists():
         raise ValueError(f"Publisher '{name.strip()}' já existe.")
     return Publisher.objects.create(name=name.strip())
 
 def update_publisher(publisher: Publisher, name: str) -> Publisher:
-    """Atualiza o nome de um publisher.
-
-    Raises:
-        ValueError: se outro publisher com esse nome já existir.
-    """
     if Publisher.objects.filter(name=name.strip()).exclude(pk=publisher.pk).exists():
         raise ValueError(f"Publisher '{name.strip()}' já existe.")
     publisher.name = name.strip()
@@ -167,5 +129,4 @@ def update_publisher(publisher: Publisher, name: str) -> Publisher:
     return publisher
 
 def delete_publisher(publisher: Publisher) -> None:
-    """Remove um publisher (jogos vinculados ficam sem publisher)."""
     publisher.delete()

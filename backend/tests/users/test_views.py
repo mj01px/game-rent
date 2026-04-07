@@ -218,7 +218,6 @@ class TestForgotPasswordView:
     URL = "/api/users/forgot-password/"
 
     def test_always_returns_200(self, api_client, db):
-        """Não revela se o email existe."""
         response = api_client.post(self.URL, {"email": "notexist@test.com"})
         assert response.status_code == 200
 

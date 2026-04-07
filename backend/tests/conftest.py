@@ -121,7 +121,6 @@ def api_client():
 
 @pytest.fixture
 def auth_client(api_client, user):
-    """APIClient autenticado como usuário comum."""
     from rest_framework_simplejwt.tokens import RefreshToken
     refresh = RefreshToken.for_user(user)
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
@@ -129,7 +128,6 @@ def auth_client(api_client, user):
 
 @pytest.fixture
 def admin_client(api_client, admin):
-    """APIClient autenticado como admin."""
     from rest_framework_simplejwt.tokens import RefreshToken
     refresh = RefreshToken.for_user(admin)
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")

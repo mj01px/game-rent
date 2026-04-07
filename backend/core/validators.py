@@ -3,14 +3,6 @@ import re
 from django.core.exceptions import ValidationError
 
 def validate_password_strength(password: str) -> None:
-    """Valida a força da senha.
-
-    Requisitos: mínimo 6 caracteres, uma maiúscula, uma minúscula,
-    um número e um caractere especial.
-
-    Raises:
-        ValidationError: se a senha não atender a algum requisito.
-    """
     errors: list[str] = []
 
     if len(password) < 6:

@@ -16,15 +16,6 @@ from .services import (
 )
 
 class GameListView(generics.ListAPIView):
-    """Lista pública de jogos com filtros, busca e ordenação.
-
-    Query params:
-        platform: filtra por plataforma (pc, playstation, xbox, switch, ps5)
-        featured: filtra destaques quando "true"
-        publisher: filtra por publisher ID
-        search: busca em name e description
-        ordering: ordena por rating, rental_price ou name
-    """
 
     serializer_class = GameSerializer
     permission_classes = [AllowAny]
@@ -40,7 +31,6 @@ class GameListView(generics.ListAPIView):
         )
 
 class GameDetailView(generics.RetrieveAPIView):
-    """Detalhe público de um jogo."""
 
     serializer_class = GameSerializer
     permission_classes = [AllowAny]
@@ -54,7 +44,6 @@ class GameDetailView(generics.RetrieveAPIView):
         return api_response(data=serializer.data)
 
 class AdminGameCreateView(APIView):
-    """Cria um jogo (admin)."""
 
     permission_classes = [IsAdminUser]
     parser_classes = [MultiPartParser, FormParser]
@@ -65,7 +54,6 @@ class AdminGameCreateView(APIView):
         return api_response(data=serializer.data, status_code=status.HTTP_201_CREATED)
 
 class AdminGameDetailView(APIView):
-    """Atualiza ou remove um jogo (admin)."""
 
     permission_classes = [IsAdminUser]
     parser_classes = [MultiPartParser, FormParser]
@@ -82,7 +70,6 @@ class AdminGameDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class PublisherListView(generics.ListAPIView):
-    """Lista pública de publishers ordenada por nome."""
 
     serializer_class = PublisherSerializer
     permission_classes = [AllowAny]
@@ -94,7 +81,6 @@ class PublisherListView(generics.ListAPIView):
         return api_response(data=serializer.data)
 
 class AdminPublisherCreateView(APIView):
-    """Cria um publisher (admin)."""
 
     permission_classes = [IsAdminUser]
 
@@ -109,7 +95,6 @@ class AdminPublisherCreateView(APIView):
         return api_response(data=PublisherSerializer(publisher).data, status_code=status.HTTP_201_CREATED)
 
 class AdminPublisherDetailView(APIView):
-    """Atualiza ou remove um publisher (admin)."""
 
     permission_classes = [IsAdminUser]
 

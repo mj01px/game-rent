@@ -44,7 +44,6 @@ class EmailSpamThrottle(AnonRateThrottle):
     scope = 'email_spam'
 
 class RegisterView(APIView):
-    """Registra um novo usuário e retorna tokens JWT."""
 
     permission_classes = [AllowAny]
 
@@ -73,7 +72,6 @@ class RegisterView(APIView):
         )
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """Estende o serializer JWT para aceitar email como login e verificar o email."""
 
     def validate(self, attrs: dict) -> dict:
         username = attrs.get("username", "")
@@ -114,7 +112,6 @@ class CustomLoginView(TokenObtainPairView):
     throttle_classes = [AuthThrottle]
 
 class ProfileView(APIView):
-    """Retorna os dados do perfil do usuário autenticado."""
 
     permission_classes = [IsAuthenticated]
 
@@ -135,7 +132,6 @@ class ProfileView(APIView):
         })
 
 class CheckUsernameView(APIView):
-    """Verifica se um username está disponível."""
 
     permission_classes = [IsAuthenticated]
 
@@ -154,7 +150,6 @@ class CheckUsernameView(APIView):
         return api_response(data={"available": available})
 
 class UpdateUsernameView(APIView):
-    """Atualiza o username do usuário autenticado."""
 
     permission_classes = [IsAuthenticated]
 
@@ -171,7 +166,6 @@ class UpdateUsernameView(APIView):
         return api_response(data={"username": user.username})
 
 class AvatarUploadView(APIView):
-    """Faz upload ou substitui o avatar do usuário autenticado."""
 
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
@@ -209,7 +203,6 @@ class AvatarUploadView(APIView):
         )
 
 class RequestEmailChangeView(APIView):
-    """Passo 1: inicia a troca de email enviando link para o email atual."""
 
     permission_classes = [IsAuthenticated]
 
@@ -226,7 +219,6 @@ class RequestEmailChangeView(APIView):
         )
 
 class RequestPasswordChangeView(APIView):
-    """Envia link de troca de senha para o email do usuário autenticado."""
 
     permission_classes = [IsAuthenticated]
 
@@ -237,7 +229,6 @@ class RequestPasswordChangeView(APIView):
         )
 
 class ForgotPasswordView(APIView):
-    """Envia link de reset de senha para o email informado (sem autenticação)."""
 
     permission_classes = [AllowAny]
     throttle_classes = [EmailSpamThrottle]
@@ -253,7 +244,6 @@ class ForgotPasswordView(APIView):
         )
 
 class ConfirmChangeView(APIView):
-    """GET: retorna info do token. POST: aplica a mudança conforme o tipo."""
 
     permission_classes = [AllowAny]
 
@@ -321,7 +311,6 @@ class ConfirmChangeView(APIView):
             return api_response(data={"detail": "Senha atualizada com sucesso!"})
 
 class ResendVerificationView(APIView):
-    """Reenvia o email de verificação para o usuário autenticado."""
 
     permission_classes = [IsAuthenticated]
     throttle_classes = [EmailSpamThrottle]
@@ -338,7 +327,6 @@ class ResendVerificationView(APIView):
         return api_response(data={"detail": "Email de verificação enviado."})
 
 class FavoritesView(APIView):
-    """Lista, adiciona e remove jogos favoritos do usuário."""
 
     permission_classes = [IsAuthenticated]
 

@@ -24,7 +24,6 @@ from .serializers import (
 from .services import create_rental, request_refund, resolve_refund
 
 class RentalListView(generics.ListAPIView):
-    """Lista os aluguéis do usuário autenticado."""
 
     serializer_class = RentalSerializer
     permission_classes = [IsAuthenticated]
@@ -33,7 +32,6 @@ class RentalListView(generics.ListAPIView):
         return get_user_rentals(self.request.user)
 
 class CreateRentalView(APIView):
-    """Cria um novo aluguel para o usuário autenticado."""
 
     permission_classes = [IsAuthenticated]
 
@@ -53,7 +51,6 @@ class CreateRentalView(APIView):
         )
 
 class RentalDetailView(generics.RetrieveAPIView):
-    """Detalhe de um aluguel do usuário autenticado."""
 
     serializer_class = RentalSerializer
     permission_classes = [IsAuthenticated]
@@ -67,7 +64,6 @@ class RentalDetailView(generics.RetrieveAPIView):
         return api_response(data=serializer.data)
 
 class RequestRefundView(APIView):
-    """Solicita reembolso de um aluguel."""
 
     permission_classes = [IsAuthenticated]
 
@@ -92,7 +88,6 @@ class RequestRefundView(APIView):
         )
 
 class AdminRentalListView(APIView):
-    """Lista todos os aluguéis (admin)."""
 
     permission_classes = [IsAdminUser]
 
@@ -102,7 +97,6 @@ class AdminRentalListView(APIView):
         return api_response(data=serializer.data)
 
 class AdminRefundListView(APIView):
-    """Lista todas as solicitações de reembolso (admin)."""
 
     permission_classes = [IsAdminUser]
 
@@ -112,7 +106,6 @@ class AdminRefundListView(APIView):
         return api_response(data=serializer.data)
 
 class AdminRefundActionView(APIView):
-    """Aprova ou rejeita uma solicitação de reembolso (admin)."""
 
     permission_classes = [IsAdminUser]
 
@@ -129,7 +122,6 @@ class AdminRefundActionView(APIView):
         return api_response(data={"detail": f"Reembolso {refund.status}."})
 
 class AdminUserListView(APIView):
-    """Lista todos os usuários com estatísticas de aluguel (admin)."""
 
     permission_classes = [IsAdminUser]
 
@@ -139,7 +131,6 @@ class AdminUserListView(APIView):
         return api_response(data=serializer.data)
 
 class AdminSendPasswordResetView(APIView):
-    """Envia email de redefinição de senha para um usuário (admin)."""
 
     permission_classes = [IsAdminUser]
 

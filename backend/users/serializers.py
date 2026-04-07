@@ -27,7 +27,6 @@ class RequestEmailChangeSerializer(serializers.Serializer):
     new_email = serializers.EmailField()
 
 class ConfirmChangeSerializer(serializers.Serializer):
-    """Valida o corpo do POST /confirm-change/ para todos os tipos de mudança."""
 
     token = serializers.CharField()
     type = serializers.ChoiceField(choices=["verify", "email", "email_new", "password"])

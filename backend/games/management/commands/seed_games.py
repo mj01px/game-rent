@@ -1,11 +1,3 @@
-"""
-Management command to seed the database with sample games and game keys.
-
-Usage:
-    python manage.py seed_games
-    python manage.py seed_games --keys 5
-    python manage.py seed_games --clear
-"""
 import uuid
 from datetime import date
 

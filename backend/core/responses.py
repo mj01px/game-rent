@@ -5,7 +5,6 @@ from rest_framework.response import Response
 from rest_framework.views import exception_handler as drf_exception_handler
 
 def custom_exception_handler(exc, context):
-    """Garante que todas as APIException seguem o envelope {data, error, meta}."""
     response = drf_exception_handler(exc, context)
     if response is None:
         return None
@@ -41,7 +40,6 @@ def api_response(
     meta: dict | None = None,
     status_code: int = status.HTTP_200_OK,
 ) -> Response:
-    """Envelope padrão para respostas bem-sucedidas: {data, error, meta}."""
     return Response(
         {
             "data": data,
@@ -57,7 +55,6 @@ def api_error(
     details: list | None = None,
     status_code: int = status.HTTP_400_BAD_REQUEST,
 ) -> Response:
-    """Envelope padrão para respostas de erro: {data, error, meta}."""
     return Response(
         {
             "data": None,

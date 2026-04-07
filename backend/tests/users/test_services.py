@@ -63,7 +63,6 @@ class TestRegisterUser:
             register_user("weakuser", "weak@test.com", "weak")
 
     def test_registration_succeeds_even_if_email_fails(self, db):
-        """Falha no envio de email não deve bloquear o registro."""
         with patch("users.services.send_verification_email", side_effect=Exception("SMTP down")):
             user, _ = register_user("resilient", "res@test.com", "Test@1234")
 
@@ -137,7 +136,6 @@ class TestForgotPassword:
         mock_email.assert_called_once()
 
     def test_silent_when_email_not_found(self, db):
-        """Não deve revelar se o email existe ou não."""
         with patch("users.services._send_email") as mock_email:
             forgot_password("notfound@test.com")
 
@@ -162,7 +160,6 @@ class TestUpdateUsername:
             update_username(user, "taken")
 
     def test_allows_same_username_for_same_user(self, db):
-        """Usuário pode 'atualizar' para o mesmo username sem erro."""
         user = UserFactory(username="same")
 
         updated = update_username(user, "same")

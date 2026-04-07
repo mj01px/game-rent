@@ -30,7 +30,6 @@ class RentalSerializer(serializers.ModelSerializer):
         return None
 
     def get_game_key_value(self, obj: Rental) -> str | None:
-        """Expõe a chave apenas enquanto o aluguel está ativo."""
         if obj.status == "active":
             return obj.game_key.key
         return None
@@ -42,10 +41,6 @@ class RentalSerializer(serializers.ModelSerializer):
             return None
 
 class CreateRentalSerializer(serializers.Serializer):
-    """Valida o input de criação de aluguel.
-
-    Apenas validação de input — a lógica de negócio fica em services.create_rental().
-    """
 
     game_id = serializers.IntegerField()
     rental_days = serializers.IntegerField(min_value=1, max_value=30)
@@ -58,7 +53,6 @@ class CreateRentalSerializer(serializers.Serializer):
         return value
 
 class AdminRentalSerializer(serializers.ModelSerializer):
-    """Serializer de aluguel para endpoints admin com dados completos."""
 
     username = serializers.CharField(source="user.username", read_only=True)
     user_email = serializers.CharField(source="user.email", read_only=True)
@@ -106,7 +100,6 @@ class AdminRentalSerializer(serializers.ModelSerializer):
         return hasattr(obj, "refund_request")
 
 class AdminRefundSerializer(serializers.ModelSerializer):
-    """Serializer de reembolso para endpoints admin."""
 
     username = serializers.CharField(source="user.username", read_only=True)
     user_email = serializers.CharField(source="user.email", read_only=True)
@@ -145,7 +138,6 @@ class AdminRefundSerializer(serializers.ModelSerializer):
         return None
 
 class AdminUserSerializer(serializers.Serializer):
-    """Serializer de usuário para endpoint admin com stats de aluguel."""
 
     id = serializers.IntegerField()
     username = serializers.CharField()
