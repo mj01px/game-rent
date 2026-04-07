@@ -63,8 +63,6 @@ export default function Confirmation() {
             `}</style>
 
             <div style={{ maxWidth: '560px', margin: '0 auto', padding: '32px 0 80px', position: 'relative' }}>
-
-                {}
                 <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '0', overflow: 'visible', pointerEvents: 'none' }}>
                     {CONFETTI.map((p, i) => (
                         <div key={i} style={{
@@ -79,8 +77,6 @@ export default function Confirmation() {
                         }} />
                     ))}
                 </div>
-
-                {}
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
                     <div style={{
                         width: '80px', height: '80px', borderRadius: '50%',
@@ -101,8 +97,6 @@ export default function Confirmation() {
                         </svg>
                     </div>
                 </div>
-
-                {}
                 <div style={{ textAlign: 'center', marginBottom: '32px', animation: 'slideUp 0.5s ease 0.3s both' }}>
                     <h1 style={{ fontSize: '26px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
                         Payment confirmed!
@@ -113,8 +107,6 @@ export default function Confirmation() {
                             : `Your ${rentals.length} rentals are active. Use the keys below to activate your games.`}
                     </p>
                 </div>
-
-                {}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
                     {rentals.map((rental, idx) => (
                         <div
@@ -127,7 +119,6 @@ export default function Confirmation() {
                                 animation: `slideUp 0.45s ease ${0.5 + idx * 0.1}s both`,
                             }}
                         >
-                            {}
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                                 <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>{rental.game_name}</p>
                                 <span style={{
@@ -137,8 +128,6 @@ export default function Confirmation() {
                                     Active
                                 </span>
                             </div>
-
-                            {}
                             <div style={{
                                 borderRadius: '12px',
                                 background: 'var(--bg)',
@@ -173,8 +162,6 @@ export default function Confirmation() {
                                     </button>
                                 </div>
                             </div>
-
-                            {}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                 {[
                                     { label: 'Started', value: new Date(rental.started_at).toLocaleDateString('pt-BR') },
@@ -189,8 +176,6 @@ export default function Confirmation() {
                         </div>
                     ))}
                 </div>
-
-                {}
                 <div style={{ display: 'flex', gap: '12px', animation: `slideUp 0.45s ease ${0.5 + rentals.length * 0.1}s both` }}>
                     <button
                         onClick={() => navigate('/my-games')}

@@ -110,7 +110,6 @@ export default function ConfirmChange() {
                 gap: '16px',
                 textAlign: 'center',
             }}>
-                {}
                 <button
                     onClick={() => navigate('/')}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}

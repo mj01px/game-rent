@@ -30,8 +30,6 @@ export default function PublisherPage() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-
-            {}
             <button
                 onClick={() => navigate(-1)}
                 style={{
@@ -49,8 +47,6 @@ export default function PublisherPage() {
                 </svg>
                 Back
             </button>
-
-            {}
             <div style={{
                 background: 'var(--surface)',
                 border: '1px solid var(--border)',
@@ -61,7 +57,6 @@ export default function PublisherPage() {
                 alignItems: 'center',
                 gap: '28px',
             }}>
-                {}
                 <div style={{
                     width: '80px', height: '80px',
                     borderRadius: '20px',
@@ -81,8 +76,6 @@ export default function PublisherPage() {
                         </svg>
                     )}
                 </div>
-
-                {}
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <h1 style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px', letterSpacing: '-0.01em' }}>
                         {publisherName}
@@ -103,8 +96,6 @@ export default function PublisherPage() {
                         </div>
                     )}
                 </div>
-
-                {}
                 {!loading && games.length > 0 && (
                     <div style={{ display: 'flex', gap: '24px', flexShrink: 0 }}>
                         <div style={{ textAlign: 'center' }}>
@@ -137,8 +128,6 @@ export default function PublisherPage() {
                     </div>
                 )}
             </div>
-
-            {}
             <div>
                 <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '20px' }}>
                     Games by {publisherName}

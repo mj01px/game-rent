@@ -65,8 +65,6 @@ export default function GameDetail() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-
-            {}
             <button
                 onClick={() => navigate(-1)}
                 style={{
@@ -84,8 +82,6 @@ export default function GameDetail() {
                 </svg>
                 Back
             </button>
-
-            {}
             <div style={{
                 position: 'relative',
                 borderRadius: '24px',
@@ -103,13 +99,10 @@ export default function GameDetail() {
                         objectFit: 'cover', objectPosition: 'center 25%',
                     }}
                 />
-                {}
                 <div style={{
                     position: 'absolute', inset: 0,
                     background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.1) 100%)',
                 }} />
-
-                {}
                 {game.platform_display && (
                     <div style={{
                         position: 'absolute', top: '20px', right: '24px',
@@ -124,8 +117,6 @@ export default function GameDetail() {
                         </span>
                     </div>
                 )}
-
-                {}
                 <div style={{ position: 'absolute', top: '20px', left: '24px', display: 'flex', gap: '8px' }}>
                     {game.is_new && (
                         <span style={{ padding: '5px 12px', background: '#E6F4EA', color: '#1E8E3E', borderRadius: '999px', fontSize: '11px', fontWeight: 700 }}>
@@ -138,8 +129,6 @@ export default function GameDetail() {
                         </span>
                     )}
                 </div>
-
-                {}
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '32px 36px' }}>
                     {game.publisher && (
                         <p style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: '8px' }}>
@@ -162,14 +151,8 @@ export default function GameDetail() {
                     </div>
                 </div>
             </div>
-
-            {}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '32px', alignItems: 'start' }}>
-
-                {}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-
-                    {}
                     {game.publisher && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{
@@ -197,8 +180,6 @@ export default function GameDetail() {
                             </div>
                         </div>
                     )}
-
-                    {}
                     {game.description && (
                         <div>
                             <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
@@ -209,8 +190,6 @@ export default function GameDetail() {
                             </p>
                         </div>
                     )}
-
-                    {}
                     {game.genre && game.genre.length > 0 && (
                         <div>
                             <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>Genres</h2>
@@ -231,8 +210,6 @@ export default function GameDetail() {
                             </div>
                         </div>
                     )}
-
-                    {}
                     <div>
                         <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>Game Details</h2>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
@@ -275,8 +252,6 @@ export default function GameDetail() {
                         </div>
                     </div>
                 </div>
-
-                {}
                 <div style={{ position: 'sticky', top: '88px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{
                         background: 'var(--surface)',
@@ -287,7 +262,6 @@ export default function GameDetail() {
                         flexDirection: 'column',
                         gap: '20px',
                     }}>
-                        {}
                         <div>
                             <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '4px' }}>
                                 <span style={{ fontSize: '28px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>
@@ -299,8 +273,6 @@ export default function GameDetail() {
                                 Original price: <span style={{ textDecoration: 'line-through' }}>${parseFloat(game.original_price).toFixed(2)}</span>
                             </p>
                         </div>
-
-                        {}
                         <div style={{
                             display: 'inline-flex', alignItems: 'center', gap: '6px',
                             padding: '6px 12px',
@@ -318,8 +290,6 @@ export default function GameDetail() {
                                 {isAvailable ? `${game.available_keys} keys available` : 'Out of stock'}
                             </span>
                         </div>
-
-                        {}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <button
                                 onClick={() => {
@@ -386,8 +356,6 @@ export default function GameDetail() {
                                 {fav ? 'Saved to Favorites' : 'Add to Favorites'}
                             </button>
                         </div>
-
-                        {}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '4px', borderTop: '1px solid var(--border-light)' }}>
                             {[
                                 { icon: '', text: 'Instant activation key delivery' },
@@ -403,8 +371,6 @@ export default function GameDetail() {
                     </div>
                 </div>
             </div>
-
-            {}
             {related.length > 0 && (
                 <div style={{ marginTop: '56px' }}>
                     <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '20px' }}>

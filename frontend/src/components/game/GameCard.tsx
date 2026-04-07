@@ -49,14 +49,12 @@ export default function GameCard({ game }: { game: Game }) {
                 e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)'
             }}
         >
-            {}
             <div style={{
                 position: 'relative',
                 background: 'var(--surface-2)',
                 aspectRatio: '4/3',
                 overflow: 'hidden',
             }}>
-                {}
                 {(game.is_new || game.is_featured) && (
                     <div style={{
                         position: 'absolute',
@@ -73,8 +71,6 @@ export default function GameCard({ game }: { game: Game }) {
                         {game.is_new ? 'New' : 'Featured'}
                     </div>
                 )}
-
-                {}
                 <button
                     onClick={handleFav}
                     style={{
@@ -98,8 +94,6 @@ export default function GameCard({ game }: { game: Game }) {
                               stroke={fav ? '#D93025' : '#80868B'} strokeWidth="2" strokeLinejoin="round"/>
                     </svg>
                 </button>
-
-                {}
                 <img
                     src={imgSrc}
                     alt={game.name}
@@ -115,8 +109,6 @@ export default function GameCard({ game }: { game: Game }) {
                         transition: 'transform 300ms ease',
                     }}
                 />
-
-                {}
                 {!isAvailable && (
                     <div style={{
                         position: 'absolute', inset: 0,
@@ -133,10 +125,7 @@ export default function GameCard({ game }: { game: Game }) {
                     </div>
                 )}
             </div>
-
-            {}
             <div style={{ padding: '16px 16px 18px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                {}
                 <p style={{
                     fontSize: '14px',
                     fontWeight: 500,
@@ -150,28 +139,21 @@ export default function GameCard({ game }: { game: Game }) {
                 }}>
                     {game.name}
                 </p>
-
-                {}
                 {game.publisher && (
                     <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
                         {game.publisher.name}
                     </p>
                 )}
-
-                {}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '12px' }}>
                     <Stars rating={rating} size={11} />
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{rating.toFixed(1)}</span>
                 </div>
 
                 <div style={{ marginTop: 'auto' }}>
-                    {}
                     <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
                         ${parseFloat(game.rental_price).toFixed(2)}
                         <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--text-muted)', marginLeft: '2px' }}>/dia</span>
                     </p>
-
-                    {}
                     <button
                         onClick={e => { e.stopPropagation(); navigate(`/game/${game.id}`) }}
                         style={{

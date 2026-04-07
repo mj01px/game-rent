@@ -111,15 +111,12 @@ export default function Login() {
                 width: '100%',
                 maxWidth: '420px',
             }}>
-                {}
                 <button
                     onClick={() => navigate('/')}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '28px', padding: 0, width: '100%' }}
                 >
                     <img src={theme === 'light' ? '/logo-light.png' : '/logo-dark.png'} alt="Game Rent" style={{ height: '32px', objectFit: 'contain' }} />
                 </button>
-
-                {}
                 {!forgotOpen && <div style={{
                     display: 'flex',
                     background: 'var(--surface-2)',
@@ -150,8 +147,6 @@ export default function Login() {
                         </button>
                     ))}
                 </div>}
-
-                {}
                 {success && (
                     <div style={{
                         background: 'var(--surface-2)',
@@ -163,8 +158,6 @@ export default function Login() {
                         <p style={{ fontSize: '14px', color: 'var(--success)', fontWeight: 500 }}>{success}</p>
                     </div>
                 )}
-
-                {}
                 {error && (
                     <div style={{
                         background: 'var(--surface-2)',
@@ -176,8 +169,6 @@ export default function Login() {
                         <p style={{ fontSize: '14px', color: 'var(--danger)', fontWeight: 500 }}>{error}</p>
                     </div>
                 )}
-
-                {}
                 {tab === 'signin' && forgotOpen && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                         <button
@@ -246,8 +237,6 @@ export default function Login() {
                         )}
                     </div>
                 )}
-
-                {}
                 {tab === 'signin' && !forgotOpen && (
                     <form onSubmit={signin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                         <div>
@@ -325,8 +314,6 @@ export default function Login() {
                         </button>
                     </form>
                 )}
-
-                {}
                 {tab === 'register' && (
                     <form onSubmit={registerUser} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                         {[
@@ -360,7 +347,6 @@ export default function Login() {
                                 onBlur={e => (e.target.style.borderColor = 'var(--border)')}
                             />
                         </div>
-                        {}
                         {password.length > 0 && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                 {pwRules.map(({ label, test }) => (

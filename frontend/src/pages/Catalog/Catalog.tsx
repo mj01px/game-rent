@@ -163,8 +163,6 @@ export default function Catalog() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-            {}
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '16px' }}>
                 <div>
                     <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -178,8 +176,6 @@ export default function Catalog() {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-
-                    {}
                     <Dropdown
                         label={genre === 'All' ? 'Genre' : genre}
                         active={genre !== 'All'}
@@ -202,8 +198,6 @@ export default function Catalog() {
                             />
                         ))}
                     </Dropdown>
-
-                    {}
                     <Dropdown
                         label={SORTS[sortIdx].label}
                         active={sortIdx !== 0}
@@ -226,8 +220,6 @@ export default function Catalog() {
                             />
                         ))}
                     </Dropdown>
-
-                    {}
                     {hasActiveFilters && (
                         <button
                             onClick={() => { setGenre('All'); setSortIdx(0) }}
@@ -254,8 +246,6 @@ export default function Catalog() {
                     )}
                 </div>
             </div>
-
-            {}
             {loading ? (
                 <div style={{ display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(4, 1fr)' }}>
                     {Array.from({ length: 8 }).map((_, i) => <GameCardSkeleton key={i} />)}

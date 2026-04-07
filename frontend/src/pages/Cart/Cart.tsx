@@ -47,7 +47,6 @@ export default function Cart() {
 
     return (
         <div className="flex gap-8 items-start">
-            {}
             <div className="flex flex-col gap-4 flex-1">
                 <div className="flex items-center justify-between">
                     <h1 className="font-bold" style={{ fontSize: '22px', color: 'var(--text-primary)' }}>
@@ -65,7 +64,6 @@ export default function Cart() {
                     return (
                         <div key={game.id} className="rounded-2xl p-4 flex gap-4"
                              style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                            {}
                             <img
                                 src={game.image || `https://picsum.photos/seed/${game.id}/120/80`}
                                 alt={game.name}
@@ -73,7 +71,6 @@ export default function Cart() {
                                 style={{ width: '110px', height: '74px' }}
                                 onError={e => (e.currentTarget.src = `https://picsum.photos/seed/${game.id}/120/80`)}
                             />
-                            {}
                             <div className="flex flex-col gap-1.5 flex-1 min-w-0">
                                 <div className="flex items-start justify-between gap-2">
                                     <div>
@@ -87,7 +84,6 @@ export default function Cart() {
                                         </svg>
                                     </button>
                                 </div>
-                                {}
                                 <div className="flex items-center gap-2 flex-wrap mt-1">
                                     {DURATIONS.map(({ label, days }) => (
                                         <button key={days} onClick={() => updateDuration(game.id, days)}
@@ -116,8 +112,6 @@ export default function Cart() {
                     )
                 })}
             </div>
-
-            {}
             <div className="flex flex-col gap-4 rounded-2xl p-5 sticky top-24"
                  style={{ minWidth: '280px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
                 <h2 className="font-bold" style={{ fontSize: '16px', color: 'var(--text-primary)' }}>Order Summary</h2>

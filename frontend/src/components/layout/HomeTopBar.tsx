@@ -77,7 +77,6 @@ export default function HomeTopBar() {
 
     return (
         <>
-            {}
             {searchOpen && (
                 <div
                     onClick={closeSearch}
@@ -90,8 +89,6 @@ export default function HomeTopBar() {
                     }}
                 />
             )}
-
-            {}
             <header
                 style={{
                     position: 'fixed',
@@ -113,7 +110,6 @@ export default function HomeTopBar() {
                     transition: 'box-shadow 200ms ease',
                 }}
             >
-                {}
                 <button
                     onClick={() => navigate('/')}
                     style={{
@@ -134,8 +130,6 @@ export default function HomeTopBar() {
                         }}
                     />
                 </button>
-
-                {}
                 {searchOpen ? (
                     <form
                         onSubmit={handleSearch}
@@ -175,7 +169,6 @@ export default function HomeTopBar() {
                     </form>
                 ) : (
                     <>
-                        {}
                         <nav style={{ display: 'flex', alignItems: 'center', marginLeft: '20px' }}>
                             {NAV_LINKS.map(({ label, path }) => {
                                 const active = location.pathname === path
@@ -224,14 +217,8 @@ export default function HomeTopBar() {
                                 )
                             })}
                         </nav>
-
-                        {}
                         <div style={{ flex: 1 }} />
-
-                        {}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-
-                            {}
                             <button
                                 onClick={openSearch}
                                 style={iconBtn}
@@ -244,8 +231,6 @@ export default function HomeTopBar() {
                                     <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                                 </svg>
                             </button>
-
-                            {}
                             <button
                                 onClick={() => navigate('/cart')}
                                 style={{ ...iconBtn, position: 'relative' }}
@@ -272,10 +257,6 @@ export default function HomeTopBar() {
                                     </span>
                                 )}
                             </button>
-
-                            {}
-
-                            {}
                             {isAuthLoading ? (
                                 <div style={{
                                     width: '34px', height: '34px',

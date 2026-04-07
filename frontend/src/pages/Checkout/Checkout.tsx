@@ -68,8 +68,6 @@ export default function Checkout() {
                     50% { opacity: 0.7; transform: scale(0.97); }
                 }
             `}</style>
-
-            {}
             {loading && (
                 <div style={{
                     position: 'fixed', inset: 0, zIndex: 100,
@@ -96,14 +94,11 @@ export default function Checkout() {
             )}
 
             <div className="flex gap-8 items-start max-w-4xl mx-auto">
-                {}
                 <div className="flex flex-col gap-6 flex-1">
                     <div>
                         <h1 className="font-bold" style={{ fontSize: '22px', color: 'var(--text-primary)' }}>Checkout</h1>
                         <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '4px' }}>{cart.length} item{cart.length !== 1 ? 's' : ''}</p>
                     </div>
-
-                    {}
                     <div className="rounded-2xl p-5" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
                         <p className="font-semibold mb-4" style={{ fontSize: '15px', color: 'var(--text-primary)' }}>Payment Method</p>
                         <div className="flex gap-3 mb-5">
@@ -176,8 +171,6 @@ export default function Checkout() {
 
                     {error && <p style={{ fontSize: '13px', color: 'var(--danger)', fontWeight: 600 }}>{error}</p>}
                 </div>
-
-                {}
                 <div className="flex flex-col gap-4 rounded-2xl p-5 sticky top-24"
                      style={{ minWidth: '280px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
                     <h2 className="font-bold" style={{ fontSize: '16px', color: 'var(--text-primary)' }}>Order Summary</h2>
