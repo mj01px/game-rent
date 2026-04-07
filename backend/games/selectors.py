@@ -3,7 +3,6 @@ from django.db.models import QuerySet
 from core.exceptions import GameNotFound, NoKeysAvailable
 from .models import Game, GameKey
 
-
 def get_game_list(
     platform: str | None = None,
     featured: str | None = None,
@@ -25,7 +24,6 @@ def get_game_list(
 
     return queryset
 
-
 def get_game_by_id(game_id: int) -> Game:
     """Retorna um jogo pelo ID com publisher e keys carregados.
 
@@ -41,7 +39,6 @@ def get_game_by_id(game_id: int) -> Game:
         )
     except Game.DoesNotExist:
         raise GameNotFound()
-
 
 def get_available_key(game: Game) -> GameKey:
     """Retorna a primeira chave disponível de um jogo.

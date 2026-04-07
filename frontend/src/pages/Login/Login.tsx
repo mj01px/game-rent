@@ -66,7 +66,6 @@ export default function Login() {
         try {
             await api.post('/users/forgot-password/', { email: forgotEmail })
         } catch {
-            // always show success to avoid email enumeration
         } finally {
             setForgotLoading(false)
             setForgotSuccess('If this email exists, a reset link was sent.')
@@ -112,7 +111,7 @@ export default function Login() {
                 width: '100%',
                 maxWidth: '420px',
             }}>
-                {/* Logo */}
+                {}
                 <button
                     onClick={() => navigate('/')}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '28px', padding: 0, width: '100%' }}
@@ -120,7 +119,7 @@ export default function Login() {
                     <img src={theme === 'light' ? '/logo-light.png' : '/logo-dark.png'} alt="Game Rent" style={{ height: '32px', objectFit: 'contain' }} />
                 </button>
 
-                {/* Tab switcher */}
+                {}
                 {!forgotOpen && <div style={{
                     display: 'flex',
                     background: 'var(--surface-2)',
@@ -152,7 +151,7 @@ export default function Login() {
                     ))}
                 </div>}
 
-                {/* Success message */}
+                {}
                 {success && (
                     <div style={{
                         background: 'var(--surface-2)',
@@ -165,7 +164,7 @@ export default function Login() {
                     </div>
                 )}
 
-                {/* Error message */}
+                {}
                 {error && (
                     <div style={{
                         background: 'var(--surface-2)',
@@ -178,7 +177,7 @@ export default function Login() {
                     </div>
                 )}
 
-                {/* Forgot password — full replacement view */}
+                {}
                 {tab === 'signin' && forgotOpen && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                         <button
@@ -248,7 +247,7 @@ export default function Login() {
                     </div>
                 )}
 
-                {/* Sign In */}
+                {}
                 {tab === 'signin' && !forgotOpen && (
                     <form onSubmit={signin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                         <div>
@@ -327,7 +326,7 @@ export default function Login() {
                     </form>
                 )}
 
-                {/* Register */}
+                {}
                 {tab === 'register' && (
                     <form onSubmit={registerUser} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                         {[
@@ -361,7 +360,7 @@ export default function Login() {
                                 onBlur={e => (e.target.style.borderColor = 'var(--border)')}
                             />
                         </div>
-                        {/* Password hints */}
+                        {}
                         {password.length > 0 && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                 {pwRules.map(({ label, test }) => (

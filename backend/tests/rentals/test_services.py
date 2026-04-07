@@ -17,7 +17,6 @@ from rentals.services import (
 )
 from tests.conftest import GameKeyFactory, RentalFactory, RefundRequestFactory
 
-
 @pytest.mark.django_db
 class TestCreateRental:
     def test_creates_rental_with_correct_total(self, user, game_with_keys):
@@ -36,9 +35,8 @@ class TestCreateRental:
     def test_sets_expiry_date(self, user, game_with_keys):
         rental = create_rental(user=user, game_id=game_with_keys.pk, rental_days=14)
 
-        # total_seconds inclui horas/segundos — 14 dias = 14 * 86400 segundos
         delta = rental.expires_at - rental.started_at
-        assert abs(delta.total_seconds() - 14 * 86400) < 5  # tolerância de 5 segundos
+        assert abs(delta.total_seconds() - 14 * 86400) < 5
 
     def test_raises_when_no_keys_available(self, user, game):
         with pytest.raises(NoKeysAvailable):
@@ -55,7 +53,6 @@ class TestCreateRental:
         create_rental(user=user, game_id=game_with_keys.pk, rental_days=1)
 
         assert game_with_keys.keys.filter(status="available").count() == initial_available - 1
-
 
 @pytest.mark.django_db
 class TestRequestRefund:
@@ -89,7 +86,6 @@ class TestRequestRefund:
 
         with pytest.raises(RefundAlreadyRequested):
             request_refund(user=user, rental_id=rental.pk, reason="Segunda vez")
-
 
 @pytest.mark.django_db
 class TestResolveRefund:
@@ -125,7 +121,6 @@ class TestResolveRefund:
 
         with pytest.raises(RefundNotResolvable):
             resolve_refund(admin_user=admin, refund_id=refund.pk, action="reject")
-
 
 @pytest.mark.django_db
 class TestExpireRental:

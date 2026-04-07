@@ -1,7 +1,6 @@
 import pytest
 from tests.conftest import GameKeyFactory, RentalFactory, RefundRequestFactory, UserFactory
 
-
 @pytest.mark.django_db
 class TestRentalListView:
     URL = "/api/rentals/"
@@ -23,9 +22,7 @@ class TestRentalListView:
         response = auth_client.get(self.URL)
 
         assert response.status_code == 200
-        # Apenas o rental do user autenticado
         assert len(response.data["data"]) == 1
-
 
 @pytest.mark.django_db
 class TestCreateRentalView:
@@ -69,7 +66,6 @@ class TestCreateRentalView:
 
         assert response.status_code == 409
 
-
 @pytest.mark.django_db
 class TestRequestRefundView:
     def url(self, pk):
@@ -101,7 +97,6 @@ class TestRequestRefundView:
 
         response = api_client.post(self.url(rental.pk), {"reason": "X"})
         assert response.status_code == 404
-
 
 @pytest.mark.django_db
 class TestAdminRefundActionView:
@@ -136,7 +131,6 @@ class TestAdminRefundActionView:
 
         response = auth_client.post(self.url(refund.pk), {"action": "approve"})
         assert response.status_code == 403
-
 
 @pytest.mark.django_db
 class TestAdminUserListView:

@@ -34,7 +34,6 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
 
     const toggleFav = async (id: number) => {
         const wasFav = favorites.includes(id)
-        // Optimistic
         setFavorites(prev => wasFav ? prev.filter(x => x !== id) : [...prev, id])
         try {
             if (wasFav) {
@@ -43,7 +42,6 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
                 await api.post('/users/favorites/', { game_id: id })
             }
         } catch {
-            // Revert
             setFavorites(prev => wasFav ? [...prev, id] : prev.filter(x => x !== id))
         }
     }

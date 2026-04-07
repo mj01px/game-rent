@@ -49,14 +49,14 @@ export default function GameCard({ game }: { game: Game }) {
                 e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)'
             }}
         >
-            {/* ── Image area — gray field, product floats ── */}
+            {}
             <div style={{
                 position: 'relative',
                 background: 'var(--surface-2)',
                 aspectRatio: '4/3',
                 overflow: 'hidden',
             }}>
-                {/* Badge — top left */}
+                {}
                 {(game.is_new || game.is_featured) && (
                     <div style={{
                         position: 'absolute',
@@ -74,7 +74,7 @@ export default function GameCard({ game }: { game: Game }) {
                     </div>
                 )}
 
-                {/* Fav button — top right */}
+                {}
                 <button
                     onClick={handleFav}
                     style={{
@@ -99,7 +99,7 @@ export default function GameCard({ game }: { game: Game }) {
                     </svg>
                 </button>
 
-                {/* Game cover — full bleed */}
+                {}
                 <img
                     src={imgSrc}
                     alt={game.name}
@@ -116,7 +116,7 @@ export default function GameCard({ game }: { game: Game }) {
                     }}
                 />
 
-                {/* Unavailable overlay */}
+                {}
                 {!isAvailable && (
                     <div style={{
                         position: 'absolute', inset: 0,
@@ -134,9 +134,9 @@ export default function GameCard({ game }: { game: Game }) {
                 )}
             </div>
 
-            {/* ── Info area ── */}
+            {}
             <div style={{ padding: '16px 16px 18px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                {/* Game name */}
+                {}
                 <p style={{
                     fontSize: '14px',
                     fontWeight: 500,
@@ -151,27 +151,27 @@ export default function GameCard({ game }: { game: Game }) {
                     {game.name}
                 </p>
 
-                {/* Publisher */}
+                {}
                 {game.publisher && (
                     <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
                         {game.publisher.name}
                     </p>
                 )}
 
-                {/* Stars rating */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '12px' }}>
                     <Stars rating={rating} size={11} />
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{rating.toFixed(1)}</span>
                 </div>
 
                 <div style={{ marginTop: 'auto' }}>
-                    {/* Price */}
+                    {}
                     <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
                         ${parseFloat(game.rental_price).toFixed(2)}
                         <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--text-muted)', marginLeft: '2px' }}>/dia</span>
                     </p>
 
-                    {/* Wide pill CTA */}
+                    {}
                     <button
                         onClick={e => { e.stopPropagation(); navigate(`/game/${game.id}`) }}
                         style={{

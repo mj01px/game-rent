@@ -25,7 +25,7 @@ export interface Game {
 
 export interface CartItem {
     game: Game
-    duration: number // weeks
+    duration: number
 }
 
 export interface Rental {

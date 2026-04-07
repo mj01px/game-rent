@@ -23,9 +23,6 @@ from .serializers import (
 )
 from .services import create_rental, request_refund, resolve_refund
 
-
-# ─── USER ENDPOINTS ───────────────────────────────────────────────────────────
-
 class RentalListView(generics.ListAPIView):
     """Lista os aluguéis do usuário autenticado."""
 
@@ -34,7 +31,6 @@ class RentalListView(generics.ListAPIView):
 
     def get_queryset(self):
         return get_user_rentals(self.request.user)
-
 
 class CreateRentalView(APIView):
     """Cria um novo aluguel para o usuário autenticado."""
@@ -56,7 +52,6 @@ class CreateRentalView(APIView):
             status_code=status.HTTP_201_CREATED,
         )
 
-
 class RentalDetailView(generics.RetrieveAPIView):
     """Detalhe de um aluguel do usuário autenticado."""
 
@@ -71,9 +66,6 @@ class RentalDetailView(generics.RetrieveAPIView):
         serializer = self.get_serializer(rental, context={"request": request})
         return api_response(data=serializer.data)
 
-
-# rentals/views.py
-
 class RequestRefundView(APIView):
     """Solicita reembolso de um aluguel."""
 
@@ -82,7 +74,6 @@ class RequestRefundView(APIView):
     def post(self, request: Request, pk: int) -> Response:
         reason = request.data.get("reason", "")
 
-        # DEFESA: Limite de tamanho
         if len(reason) > 500:
             return api_error(
                 code="REASON_TOO_LONG",
@@ -100,9 +91,6 @@ class RequestRefundView(APIView):
             status_code=status.HTTP_201_CREATED,
         )
 
-
-# ─── ADMIN ENDPOINTS ──────────────────────────────────────────────────────────
-
 class AdminRentalListView(APIView):
     """Lista todos os aluguéis (admin)."""
 
@@ -113,7 +101,6 @@ class AdminRentalListView(APIView):
         serializer = AdminRentalSerializer(rentals, many=True, context={"request": request})
         return api_response(data=serializer.data)
 
-
 class AdminRefundListView(APIView):
     """Lista todas as solicitações de reembolso (admin)."""
 
@@ -123,7 +110,6 @@ class AdminRefundListView(APIView):
         refunds = get_refund_requests()
         serializer = AdminRefundSerializer(refunds, many=True, context={"request": request})
         return api_response(data=serializer.data)
-
 
 class AdminRefundActionView(APIView):
     """Aprova ou rejeita uma solicitação de reembolso (admin)."""
@@ -142,7 +128,6 @@ class AdminRefundActionView(APIView):
         refund = resolve_refund(admin_user=request.user, refund_id=pk, action=action)
         return api_response(data={"detail": f"Reembolso {refund.status}."})
 
-
 class AdminUserListView(APIView):
     """Lista todos os usuários com estatísticas de aluguel (admin)."""
 
@@ -152,7 +137,6 @@ class AdminUserListView(APIView):
         users = get_users_with_rental_stats()
         serializer = AdminUserSerializer(users, many=True, context={"request": request})
         return api_response(data=serializer.data)
-
 
 class AdminSendPasswordResetView(APIView):
     """Envia email de redefinição de senha para um usuário (admin)."""

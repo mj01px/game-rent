@@ -14,13 +14,7 @@ from .selectors import get_token_info
 
 import logging
 
-
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Helpers internos
-# ---------------------------------------------------------------------------
 
 def _create_token(user: User, change_type: str, new_value: str = "") -> str:
     """Cria (ou substitui) um ProfileChangeToken e retorna o token string."""
@@ -34,7 +28,6 @@ def _create_token(user: User, change_type: str, new_value: str = "") -> str:
     )
     return token
 
-
 def _send_email(subject: str, message: str, recipient: str) -> None:
     send_mail(
         subject=subject,
@@ -42,11 +35,6 @@ def _send_email(subject: str, message: str, recipient: str) -> None:
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[recipient],
     )
-
-
-# ---------------------------------------------------------------------------
-# Registro e verificação de email
-# ---------------------------------------------------------------------------
 
 @transaction.atomic
 def register_user(username: str, email: str, password: str) -> tuple[User, dict]:
@@ -78,7 +66,6 @@ def register_user(username: str, email: str, password: str) -> tuple[User, dict]
     try:
         send_verification_email(user)
     except Exception as e:
-        # Registra o erro detalhado nos logs do servidor em vez de usar 'pass'
         logger.error(f"Falha ao enviar e-mail de verificação para {email}", exc_info=True)
 
     refresh = RefreshToken.for_user(user)
@@ -86,7 +73,6 @@ def register_user(username: str, email: str, password: str) -> tuple[User, dict]
         "access": str(refresh.access_token),
         "refresh": str(refresh),
     }
-
 
 def send_verification_email(user: User) -> None:
     """Cria token de verificação de email e envia o link para o usuário."""
@@ -104,7 +90,6 @@ def send_verification_email(user: User) -> None:
         recipient=user.email,
     )
 
-
 def confirm_email_verification(token_str: str) -> None:
     """Marca o email do usuário como verificado e apaga o token.
 
@@ -116,11 +101,6 @@ def confirm_email_verification(token_str: str) -> None:
     profile.is_verified = True
     profile.save(update_fields=["is_verified"])
     token_obj.delete()
-
-
-# ---------------------------------------------------------------------------
-# Troca de email (fluxo em 2 etapas)
-# ---------------------------------------------------------------------------
 
 def request_email_change(user: User, new_email: str) -> None:
     """Passo 1: valida o novo email e envia link de confirmação para o email atual.
@@ -146,7 +126,6 @@ def request_email_change(user: User, new_email: str) -> None:
         ),
         recipient=user.email,
     )
-
 
 def confirm_email_change(token_str: str) -> str:
     """Passo 2: usuário confirmou — envia link de verificação para o novo email.
@@ -179,7 +158,6 @@ def confirm_email_change(token_str: str) -> str:
     )
     return new_email
 
-
 def confirm_new_email(token_str: str) -> None:
     """Passo 3: aplica efetivamente a troca de email.
 
@@ -191,11 +169,6 @@ def confirm_new_email(token_str: str) -> None:
     user.email = token_obj.new_value
     user.save(update_fields=["email"])
     token_obj.delete()
-
-
-# ---------------------------------------------------------------------------
-# Troca e reset de senha
-# ---------------------------------------------------------------------------
 
 def request_password_change(user: User) -> None:
     """Envia link de troca de senha para o email do usuário autenticado."""
@@ -212,7 +185,6 @@ def request_password_change(user: User) -> None:
         ),
         recipient=user.email,
     )
-
 
 def forgot_password(email: str) -> None:
     """Envia link de reset de senha para o email informado.
@@ -238,7 +210,6 @@ def forgot_password(email: str) -> None:
         recipient=user.email,
     )
 
-
 def confirm_password_change(token_str: str, new_password: str) -> None:
     """Aplica a troca de senha após validar o token e a força da senha.
 
@@ -252,7 +223,6 @@ def confirm_password_change(token_str: str, new_password: str) -> None:
     user.set_password(new_password)
     user.save()
     token_obj.delete()
-
 
 def send_password_reset_email(user: User) -> None:
     """Envia link de reset de senha para um usuário (acionado pelo admin).
@@ -272,11 +242,6 @@ def send_password_reset_email(user: User) -> None:
         recipient=user.email,
     )
 
-
-# ---------------------------------------------------------------------------
-# Perfil e avatar
-# ---------------------------------------------------------------------------
-
 def update_username(user: User, new_username: str) -> User:
     """Troca o username do usuário.
 
@@ -289,7 +254,6 @@ def update_username(user: User, new_username: str) -> User:
     user.save(update_fields=["username"])
     return user
 
-
 def upload_avatar(user: User, image) -> UserProfile:
     """Atualiza ou cria o avatar do usuário."""
     profile, _ = UserProfile.objects.get_or_create(user=user)
@@ -297,15 +261,9 @@ def upload_avatar(user: User, image) -> UserProfile:
     profile.save(update_fields=["avatar"])
     return profile
 
-
-# ---------------------------------------------------------------------------
-# Favoritos
-# ---------------------------------------------------------------------------
-
 def add_favorite(user: User, game_id: int) -> None:
     """Adiciona um jogo aos favoritos do usuário (idempotente)."""
     Favorite.objects.get_or_create(user=user, game_id=game_id)
-
 
 def remove_favorite(user: User, game_id: int) -> None:
     """Remove um jogo dos favoritos do usuário."""

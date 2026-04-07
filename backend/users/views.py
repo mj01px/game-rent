@@ -37,15 +37,11 @@ from .services import (
 
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
-
-# Throttle Security
-
 class AuthThrottle(AnonRateThrottle):
     scope = 'auth'
 
 class EmailSpamThrottle(AnonRateThrottle):
     scope = 'email_spam'
-# ─── AUTH ─────────────────────────────────────────────────────────────────────
 
 class RegisterView(APIView):
     """Registra um novo usuário e retorna tokens JWT."""
@@ -75,7 +71,6 @@ class RegisterView(APIView):
             },
             status_code=status.HTTP_201_CREATED,
         )
-
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """Estende o serializer JWT para aceitar email como login e verificar o email."""
@@ -114,13 +109,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         }
         return data
 
-
 class CustomLoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
     throttle_classes = [AuthThrottle]
-
-
-# ─── PROFILE ──────────────────────────────────────────────────────────────────
 
 class ProfileView(APIView):
     """Retorna os dados do perfil do usuário autenticado."""
@@ -143,7 +134,6 @@ class ProfileView(APIView):
             "is_staff": user.is_staff,
         })
 
-
 class CheckUsernameView(APIView):
     """Verifica se um username está disponível."""
 
@@ -163,7 +153,6 @@ class CheckUsernameView(APIView):
         available = not User.objects.filter(username=username).exists()
         return api_response(data={"available": available})
 
-
 class UpdateUsernameView(APIView):
     """Atualiza o username do usuário autenticado."""
 
@@ -181,7 +170,6 @@ class UpdateUsernameView(APIView):
         )
         return api_response(data={"username": user.username})
 
-
 class AvatarUploadView(APIView):
     """Faz upload ou substitui o avatar do usuário autenticado."""
 
@@ -197,7 +185,6 @@ class AvatarUploadView(APIView):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        # 1. Validação de Tamanho (Máximo de 2MB)
         if image.size > 2 * 1024 * 1024:
             return api_error(
                 code="FILE_TOO_LARGE",
@@ -205,9 +192,8 @@ class AvatarUploadView(APIView):
                 status_code=status.HTTP_400_BAD_REQUEST
             )
 
-        # 2. Validação de Tipo de Arquivo (Magic Bytes)
         file_header = image.read(2048)
-        image.seek(0)  # Retorna o ponteiro para o início para salvar depois
+        image.seek(0)
         mime_type = magic.from_buffer(file_header, mime=True)
 
         if mime_type not in ['image/jpeg', 'image/png', 'image/webp']:
@@ -221,9 +207,6 @@ class AvatarUploadView(APIView):
         return api_response(
             data={"avatar": request.build_absolute_uri(profile.avatar.url)}
         )
-
-
-# ─── EMAIL CHANGE ─────────────────────────────────────────────────────────────
 
 class RequestEmailChangeView(APIView):
     """Passo 1: inicia a troca de email enviando link para o email atual."""
@@ -242,9 +225,6 @@ class RequestEmailChangeView(APIView):
             data={"detail": "Link de confirmação enviado para o seu email atual."}
         )
 
-
-# ─── PASSWORD CHANGE ──────────────────────────────────────────────────────────
-
 class RequestPasswordChangeView(APIView):
     """Envia link de troca de senha para o email do usuário autenticado."""
 
@@ -255,7 +235,6 @@ class RequestPasswordChangeView(APIView):
         return api_response(
             data={"detail": "Link de redefinição de senha enviado para o seu email."}
         )
-
 
 class ForgotPasswordView(APIView):
     """Envia link de reset de senha para o email informado (sem autenticação)."""
@@ -272,9 +251,6 @@ class ForgotPasswordView(APIView):
         return api_response(
             data={"detail": "Se este email estiver cadastrado, você receberá um link em breve."}
         )
-
-
-# ─── CONFIRM CHANGE ───────────────────────────────────────────────────────────
 
 class ConfirmChangeView(APIView):
     """GET: retorna info do token. POST: aplica a mudança conforme o tipo."""
@@ -344,7 +320,6 @@ class ConfirmChangeView(APIView):
             confirm_password_change(token_str, new_password)
             return api_response(data={"detail": "Senha atualizada com sucesso!"})
 
-
 class ResendVerificationView(APIView):
     """Reenvia o email de verificação para o usuário autenticado."""
 
@@ -361,9 +336,6 @@ class ResendVerificationView(APIView):
             )
         send_verification_email(request.user)
         return api_response(data={"detail": "Email de verificação enviado."})
-
-
-# ─── FAVORITES ────────────────────────────────────────────────────────────────
 
 class FavoritesView(APIView):
     """Lista, adiciona e remove jogos favoritos do usuário."""

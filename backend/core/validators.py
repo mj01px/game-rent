@@ -2,7 +2,6 @@ import re
 
 from django.core.exceptions import ValidationError
 
-
 def validate_password_strength(password: str) -> None:
     """Valida a força da senha.
 

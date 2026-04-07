@@ -1,12 +1,10 @@
 from rest_framework import serializers
 from .models import Game, GameKey, Publisher
 
-
 class PublisherSerializer(serializers.ModelSerializer):
     class Meta:
         model = Publisher
         fields = ['id', 'name']
-
 
 class GameSerializer(serializers.ModelSerializer):
     available_keys = serializers.SerializerMethodField()
@@ -31,7 +29,6 @@ class GameSerializer(serializers.ModelSerializer):
         if obj.image and request:
             return request.build_absolute_uri(obj.image.url)
         return None
-
 
 class GameKeySerializer(serializers.ModelSerializer):
     class Meta:

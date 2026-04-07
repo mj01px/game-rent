@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-
 class Favorite(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites')
     game_id = models.IntegerField()
@@ -13,7 +12,6 @@ class Favorite(models.Model):
     def __str__(self):
         return f"{self.user.username} → game {self.game_id}"
 
-
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
@@ -22,11 +20,10 @@ class UserProfile(models.Model):
     def __str__(self):
         return f"Profile of {self.user.username}"
 
-
 class ProfileChangeToken(models.Model):
     CHANGE_TYPES = [
         ('email', 'Email'),
-        ('email_new', 'Email New'),   # verificação do novo email
+        ('email_new', 'Email New'),
         ('password', 'Password'),
         ('verify', 'Verify'),
     ]

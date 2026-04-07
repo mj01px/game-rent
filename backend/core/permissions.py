@@ -2,13 +2,11 @@ from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from rest_framework.views import View
 
-
 class IsAdminUser(BasePermission):
     """Permite acesso apenas a usuários staff/admin."""
 
     def has_permission(self, request: Request, view: View) -> bool:
         return bool(request.user and request.user.is_staff)
-
 
 class IsOwnerOrAdmin(BasePermission):
     """Permite acesso ao dono do objeto ou a admins.

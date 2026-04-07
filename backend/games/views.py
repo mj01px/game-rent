@@ -15,7 +15,6 @@ from .services import (
     update_game, update_publisher,
 )
 
-
 class GameListView(generics.ListAPIView):
     """Lista pública de jogos com filtros, busca e ordenação.
 
@@ -40,7 +39,6 @@ class GameListView(generics.ListAPIView):
             publisher_id=self.request.query_params.get("publisher"),
         )
 
-
 class GameDetailView(generics.RetrieveAPIView):
     """Detalhe público de um jogo."""
 
@@ -55,7 +53,6 @@ class GameDetailView(generics.RetrieveAPIView):
         serializer = self.get_serializer(game)
         return api_response(data=serializer.data)
 
-
 class AdminGameCreateView(APIView):
     """Cria um jogo (admin)."""
 
@@ -66,7 +63,6 @@ class AdminGameCreateView(APIView):
         game = create_game(data=request.data, image=request.FILES.get("image"))
         serializer = GameSerializer(game, context={"request": request})
         return api_response(data=serializer.data, status_code=status.HTTP_201_CREATED)
-
 
 class AdminGameDetailView(APIView):
     """Atualiza ou remove um jogo (admin)."""
@@ -85,7 +81,6 @@ class AdminGameDetailView(APIView):
         delete_game(game)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
 class PublisherListView(generics.ListAPIView):
     """Lista pública de publishers ordenada por nome."""
 
@@ -97,7 +92,6 @@ class PublisherListView(generics.ListAPIView):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return api_response(data=serializer.data)
-
 
 class AdminPublisherCreateView(APIView):
     """Cria um publisher (admin)."""
@@ -113,7 +107,6 @@ class AdminPublisherCreateView(APIView):
         except ValueError as e:
             return api_error("CONFLICT", str(e), status_code=status.HTTP_409_CONFLICT)
         return api_response(data=PublisherSerializer(publisher).data, status_code=status.HTTP_201_CREATED)
-
 
 class AdminPublisherDetailView(APIView):
     """Atualiza ou remove um publisher (admin)."""

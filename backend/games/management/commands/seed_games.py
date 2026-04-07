@@ -3,8 +3,8 @@ Management command to seed the database with sample games and game keys.
 
 Usage:
     python manage.py seed_games
-    python manage.py seed_games --keys 5      # 5 keys per game (default: 3)
-    python manage.py seed_games --clear       # wipe existing data before seeding
+    python manage.py seed_games --keys 5
+    python manage.py seed_games --clear
 """
 import uuid
 from datetime import date
@@ -13,7 +13,6 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from games.models import Game, GameKey, Publisher
-
 
 PUBLISHERS = [
     "Rockstar Games",
@@ -30,7 +29,6 @@ PUBLISHERS = [
     "Sony Interactive Entertainment",
 ]
 
-# Each entry: (name, platform, original_price, rental_price, rating, is_featured, is_new, publisher, release_date, genre, description)
 GAMES = [
     (
         "Red Dead Redemption 2",
@@ -304,7 +302,6 @@ GAMES = [
     ),
 ]
 
-
 class Command(BaseCommand):
     help = "Seed the database with sample games and publishers."
 
@@ -331,7 +328,6 @@ class Command(BaseCommand):
             Publisher.objects.all().delete()
             self.stdout.write(self.style.WARNING("Existing data cleared."))
 
-        # Create publishers
         publisher_map: dict[str, Publisher] = {}
         for name in PUBLISHERS:
             pub, created = Publisher.objects.get_or_create(name=name)
@@ -339,7 +335,6 @@ class Command(BaseCommand):
             if created:
                 self.stdout.write(f"  Publisher: {name}")
 
-        # Create games + keys
         created_count = 0
         skipped_count = 0
 
@@ -366,7 +361,6 @@ class Command(BaseCommand):
             )
 
             if created:
-                # Generate keys for this game
                 GameKey.objects.bulk_create([
                     GameKey(game=game, key=str(uuid.uuid4()), status="available")
                     for _ in range(keys_per_game)

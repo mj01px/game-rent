@@ -12,7 +12,6 @@ const NAV_LINKS = [
     { label: 'Favorite Games', path: '/favorites' },
 ]
 
-// Icon button style inside the pill
 const iconBtn: React.CSSProperties = {
     width: '38px',
     height: '38px',
@@ -42,7 +41,6 @@ export default function HomeTopBar() {
     const dropdownRef = useRef<HTMLDivElement>(null)
     const searchRef   = useRef<HTMLInputElement>(null)
 
-    // close dropdown on outside click
     useEffect(() => {
         const handler = (e: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
@@ -52,12 +50,10 @@ export default function HomeTopBar() {
         return () => document.removeEventListener('mousedown', handler)
     }, [])
 
-    // auto-focus search input
     useEffect(() => {
         if (searchOpen) searchRef.current?.focus()
     }, [searchOpen])
 
-    // close search on Escape
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
             if (e.key === 'Escape') { setSearchOpen(false); setQuery('') }
@@ -81,7 +77,7 @@ export default function HomeTopBar() {
 
     return (
         <>
-            {/* Dark overlay when search is open */}
+            {}
             {searchOpen && (
                 <div
                     onClick={closeSearch}
@@ -95,7 +91,7 @@ export default function HomeTopBar() {
                 />
             )}
 
-            {/* Floating pill topbar */}
+            {}
             <header
                 style={{
                     position: 'fixed',
@@ -117,7 +113,7 @@ export default function HomeTopBar() {
                     transition: 'box-shadow 200ms ease',
                 }}
             >
-                {/* ── Logo ─────────────────────────────────── */}
+                {}
                 <button
                     onClick={() => navigate('/')}
                     style={{
@@ -139,7 +135,7 @@ export default function HomeTopBar() {
                     />
                 </button>
 
-                {/* ── Search mode — full pill input ──────── */}
+                {}
                 {searchOpen ? (
                     <form
                         onSubmit={handleSearch}
@@ -179,7 +175,7 @@ export default function HomeTopBar() {
                     </form>
                 ) : (
                     <>
-                        {/* ── Nav links ──────────────────────────── */}
+                        {}
                         <nav style={{ display: 'flex', alignItems: 'center', marginLeft: '20px' }}>
                             {NAV_LINKS.map(({ label, path }) => {
                                 const active = location.pathname === path
@@ -229,13 +225,13 @@ export default function HomeTopBar() {
                             })}
                         </nav>
 
-                        {/* ── Spacer ─────────────────────────────── */}
+                        {}
                         <div style={{ flex: 1 }} />
 
-                        {/* ── Icon buttons ───────────────────────── */}
+                        {}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
 
-                            {/* Search */}
+                            {}
                             <button
                                 onClick={openSearch}
                                 style={iconBtn}
@@ -249,7 +245,7 @@ export default function HomeTopBar() {
                                 </svg>
                             </button>
 
-                            {/* Cart */}
+                            {}
                             <button
                                 onClick={() => navigate('/cart')}
                                 style={{ ...iconBtn, position: 'relative' }}
@@ -277,10 +273,9 @@ export default function HomeTopBar() {
                                 )}
                             </button>
 
-                            {/* Theme toggle */}
+                            {}
 
-
-                            {/* Avatar / Sign in */}
+                            {}
                             {isAuthLoading ? (
                                 <div style={{
                                     width: '34px', height: '34px',

@@ -5,18 +5,12 @@ from django.db import transaction
 
 from .models import Game, GameKey, Publisher
 
-
-# ---------------------------------------------------------------------------
-# Helpers internos
-# ---------------------------------------------------------------------------
-
 def _resolve_publisher(publisher_name: str | None) -> Publisher | None:
     """Busca ou cria um publisher pelo nome. Retorna None se nome vazio."""
     if not publisher_name or not publisher_name.strip():
         return None
     publisher, _ = Publisher.objects.get_or_create(name=publisher_name.strip())
     return publisher
-
 
 def _get_publisher_by_id(publisher_id: str | int | None) -> Publisher | None:
     """Retorna Publisher pelo ID ou None se não encontrado/não fornecido."""
@@ -26,7 +20,6 @@ def _get_publisher_by_id(publisher_id: str | int | None) -> Publisher | None:
         return Publisher.objects.get(pk=int(publisher_id))
     except (Publisher.DoesNotExist, ValueError, TypeError):
         return None
-
 
 def _parse_genre(genre_raw: str | list | None) -> list:
     """Converte genre de JSON string ou lista para list Python."""
@@ -39,7 +32,6 @@ def _parse_genre(genre_raw: str | list | None) -> list:
     except (json.JSONDecodeError, TypeError):
         return []
 
-
 def _parse_bool(value: str | bool | None, default: bool = False) -> bool:
     """Converte string "true"/"false" (vinda de multipart) para bool."""
     if isinstance(value, bool):
@@ -47,11 +39,6 @@ def _parse_bool(value: str | bool | None, default: bool = False) -> bool:
     if isinstance(value, str):
         return value.lower() == "true"
     return default
-
-
-# ---------------------------------------------------------------------------
-# Services públicos
-# ---------------------------------------------------------------------------
 
 @transaction.atomic
 def create_game(data: dict, image=None) -> Game:
@@ -91,7 +78,6 @@ def create_game(data: dict, image=None) -> Game:
         add_game_keys(game, keys_to_add)
 
     return game
-
 
 @transaction.atomic
 def update_game(game: Game, data: dict, image=None) -> Game:
@@ -138,7 +124,6 @@ def update_game(game: Game, data: dict, image=None) -> Game:
 
     return game
 
-
 def add_game_keys(game: Game, quantity: int) -> list[GameKey]:
     """Cria N chaves disponíveis para um jogo via bulk_create.
 
@@ -155,15 +140,9 @@ def add_game_keys(game: Game, quantity: int) -> list[GameKey]:
     ]
     return GameKey.objects.bulk_create(keys)
 
-
 def delete_game(game: Game) -> None:
     """Remove um jogo e todas as suas chaves (CASCADE no model)."""
     game.delete()
-
-
-# ---------------------------------------------------------------------------
-# Publisher services
-# ---------------------------------------------------------------------------
 
 def create_publisher(name: str) -> Publisher:
     """Cria um publisher com o nome fornecido.
@@ -174,7 +153,6 @@ def create_publisher(name: str) -> Publisher:
     if Publisher.objects.filter(name=name.strip()).exists():
         raise ValueError(f"Publisher '{name.strip()}' já existe.")
     return Publisher.objects.create(name=name.strip())
-
 
 def update_publisher(publisher: Publisher, name: str) -> Publisher:
     """Atualiza o nome de um publisher.
@@ -187,7 +165,6 @@ def update_publisher(publisher: Publisher, name: str) -> Publisher:
     publisher.name = name.strip()
     publisher.save()
     return publisher
-
 
 def delete_publisher(publisher: Publisher) -> None:
     """Remove um publisher (jogos vinculados ficam sem publisher)."""

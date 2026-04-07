@@ -45,7 +45,6 @@ export default function Home() {
         heroTimerRef.current = setInterval(() => setHeroIndex(i => (i + 1) % len), 6000)
     }
 
-    // Auto-advance hero
     useEffect(() => {
         if (featured.length < 2) return
         startTimer(featured.length)
@@ -69,7 +68,7 @@ export default function Home() {
                 }
             `}</style>
 
-            {/* ─── Campo acima do hero ──────────────────────────────── */}
+            {}
             {!loading && hero && (
                 <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '20px 40px 16px' }}>
                     <div style={{
@@ -142,12 +141,12 @@ export default function Home() {
                 </div>
             )}
 
-            {/* ─── Hero card ────────────────────────────────────────── */}
+            {}
             {!loading && hero && (
                 <Section style={{ padding: '0 40px 0' }}>
                     <div style={{ borderRadius: '24px', overflow: 'hidden', height: '520px', position: 'relative' }}>
 
-                        {/* Imagens empilhadas — cross-fade via opacity */}
+                        {}
                         {featured.map((g, i) => (
                             <img
                                 key={g.id}
@@ -162,13 +161,13 @@ export default function Home() {
                             />
                         ))}
 
-                        {/* Gradiente */}
+                        {}
                         <div style={{
                             position: 'absolute', inset: 0,
                             background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.55) 35%, rgba(0,0,0,0.15) 65%, rgba(0,0,0,0.05) 100%)',
                         }} />
 
-                        {/* Conteúdo — re-anima ao trocar de jogo */}
+                        {}
                         <div
                             key={heroIndex}
                             style={{
@@ -232,7 +231,7 @@ export default function Home() {
                             </div>
                         </div>
 
-                        {/* Platform badge */}
+                        {}
                         {hero.platform && (
                             <div style={{
                                 position: 'absolute', top: '20px', right: '24px',
@@ -246,10 +245,10 @@ export default function Home() {
                             </div>
                         )}
 
-                        {/* ── Navegação: prev / dots / next ───────────── */}
+                        {}
                         {featured.length > 1 && (
                             <>
-                                {/* Botão Next */}
+                                {}
                                 <button
                                     onClick={() => goTo((heroIndex + 1) % featured.length)}
                                     style={{
@@ -272,7 +271,7 @@ export default function Home() {
                                     </svg>
                                 </button>
 
-                                {/* Dots */}
+                                {}
                                 <div style={{
                                     position: 'absolute', bottom: '20px', right: '24px',
                                     display: 'flex', gap: '6px', alignItems: 'center',
@@ -298,14 +297,14 @@ export default function Home() {
                 </Section>
             )}
 
-            {/* Hero skeleton */}
+            {}
             {loading && (
                 <Section style={{ padding: '0 40px 0' }}>
                     <div style={{ borderRadius: '24px', height: '520px', background: 'var(--surface-2)', animation: 'pulse 2s infinite' }} />
                 </Section>
             )}
 
-            {/* ─── All Games ────────────────────────────────────────── */}
+            {}
             <Section style={{ paddingTop: '40px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>

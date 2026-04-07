@@ -6,7 +6,6 @@ from core.exceptions import GameNotFound, NoKeysAvailable
 from games.selectors import get_available_key, get_game_by_id, get_game_list
 from tests.conftest import GameFactory, GameKeyFactory, PublisherFactory
 
-
 @pytest.mark.django_db
 class TestGetGameList:
     def test_returns_all_games_by_default(self, db):
@@ -50,10 +49,7 @@ class TestGetGameList:
         with CaptureQueriesContext(connection) as ctx:
             list(get_game_list())
 
-        # 1 query para games+publisher (select_related) + 1 para keys (prefetch_related)
-        # Sem prefetch seria N+1 — com prefetch são sempre 2 independente do volume
         assert len(ctx.captured_queries) == 2
-
 
 @pytest.mark.django_db
 class TestGetGameById:
@@ -69,12 +65,10 @@ class TestGetGameById:
     def test_loads_publisher_and_keys_without_extra_queries(self, game):
         with CaptureQueriesContext(connection) as ctx:
             result = get_game_by_id(game.pk)
-            _ = result.publisher.name  # select_related — sem query extra
-            _ = list(result.keys.all())  # prefetch_related — sem query extra
+            _ = result.publisher.name
+            _ = list(result.keys.all())
 
-        # 1 query para game+publisher + 1 para keys via prefetch_related
         assert len(ctx.captured_queries) == 2
-
 
 @pytest.mark.django_db
 class TestGetAvailableKey:

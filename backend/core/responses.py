@@ -4,21 +4,18 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import exception_handler as drf_exception_handler
 
-
 def custom_exception_handler(exc, context):
     """Garante que todas as APIException seguem o envelope {data, error, meta}."""
     response = drf_exception_handler(exc, context)
     if response is None:
         return None
 
-    # Extrai a mensagem: DRF usa 'detail' ou dict de erros de validação
     detail = response.data.get("detail") if isinstance(response.data, dict) else None
 
     if detail is not None:
         message = str(detail)
         code = getattr(getattr(detail, "code", None), "__str__", lambda: "error")() or "error"
     else:
-        # Erros de validação de serializer: { field: [msg, ...] }
         details = []
         for field, errors in (response.data.items() if isinstance(response.data, dict) else []):
             for err in (errors if isinstance(errors, list) else [errors]):
@@ -39,7 +36,6 @@ def custom_exception_handler(exc, context):
     }
     return response
 
-
 def api_response(
     data: Any = None,
     meta: dict | None = None,
@@ -54,7 +50,6 @@ def api_response(
         },
         status=status_code,
     )
-
 
 def api_error(
     code: str,

@@ -15,7 +15,6 @@ from games.selectors import get_game_by_id
 from .models import RefundRequest, Rental
 from .selectors import get_refund_by_id, get_rental_by_id
 
-
 @transaction.atomic
 def create_rental(user: User, game_id: int, rental_days: int) -> Rental:
     """Cria um aluguel para o usuário, reservando uma chave disponível.
@@ -63,7 +62,6 @@ def create_rental(user: User, game_id: int, rental_days: int) -> Rental:
 
     return rental
 
-
 @transaction.atomic
 def request_refund(user: User, rental_id: int, reason: str) -> RefundRequest:
     """Cria uma solicitação de reembolso para um aluguel do usuário.
@@ -94,7 +92,6 @@ def request_refund(user: User, rental_id: int, reason: str) -> RefundRequest:
         user=user,
         reason=reason,
     )
-
 
 @transaction.atomic
 def resolve_refund(admin_user: User, refund_id: int, action: str) -> RefundRequest:
@@ -135,7 +132,6 @@ def resolve_refund(admin_user: User, refund_id: int, action: str) -> RefundReque
     refund.save(update_fields=["status", "resolved_by", "resolved_at"])
 
     return refund
-
 
 def expire_rental(rental: Rental) -> None:
     """Expira um rental e libera sua GameKey.

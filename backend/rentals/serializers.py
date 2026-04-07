@@ -2,7 +2,6 @@ from rest_framework import serializers
 
 from .models import RefundRequest, Rental
 
-
 class RentalSerializer(serializers.ModelSerializer):
     game_name = serializers.CharField(source="game_key.game.name", read_only=True)
     game_image = serializers.SerializerMethodField()
@@ -42,7 +41,6 @@ class RentalSerializer(serializers.ModelSerializer):
         except RefundRequest.DoesNotExist:
             return None
 
-
 class CreateRentalSerializer(serializers.Serializer):
     """Valida o input de criação de aluguel.
 
@@ -58,7 +56,6 @@ class CreateRentalSerializer(serializers.Serializer):
         if not Game.objects.filter(pk=value).exists():
             raise serializers.ValidationError("Jogo não encontrado.")
         return value
-
 
 class AdminRentalSerializer(serializers.ModelSerializer):
     """Serializer de aluguel para endpoints admin com dados completos."""
@@ -108,7 +105,6 @@ class AdminRentalSerializer(serializers.ModelSerializer):
     def get_has_refund_request(self, obj: Rental) -> bool:
         return hasattr(obj, "refund_request")
 
-
 class AdminRefundSerializer(serializers.ModelSerializer):
     """Serializer de reembolso para endpoints admin."""
 
@@ -147,7 +143,6 @@ class AdminRefundSerializer(serializers.ModelSerializer):
         if image and request:
             return request.build_absolute_uri(image.url)
         return None
-
 
 class AdminUserSerializer(serializers.Serializer):
     """Serializer de usuário para endpoint admin com stats de aluguel."""

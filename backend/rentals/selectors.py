@@ -4,7 +4,6 @@ from django.db.models import Count, QuerySet
 from core.exceptions import RefundNotFound, RentalNotFound
 from .models import RefundRequest, Rental
 
-
 def get_user_rentals(user: User) -> QuerySet[Rental]:
     """Retorna todos os aluguéis de um usuário com dados do jogo carregados."""
     return (
@@ -13,7 +12,6 @@ def get_user_rentals(user: User) -> QuerySet[Rental]:
         .prefetch_related("refund_request")
         .filter(user=user)
     )
-
 
 def get_rental_by_id(rental_id: int, user: User | None = None) -> Rental:
     """Retorna um aluguel pelo ID, opcionalmente restrito a um usuário.
@@ -37,7 +35,6 @@ def get_rental_by_id(rental_id: int, user: User | None = None) -> Rental:
     except Rental.DoesNotExist:
         raise RentalNotFound()
 
-
 def get_all_rentals() -> QuerySet[Rental]:
     """Retorna todos os aluguéis com dados de usuário e jogo (uso admin)."""
     return Rental.objects.select_related(
@@ -45,7 +42,6 @@ def get_all_rentals() -> QuerySet[Rental]:
         "user__profile",
         "game_key__game",
     ).all()
-
 
 def get_refund_requests(status: str | None = None) -> QuerySet[RefundRequest]:
     """Retorna solicitações de reembolso com filtro opcional de status."""
@@ -57,7 +53,6 @@ def get_refund_requests(status: str | None = None) -> QuerySet[RefundRequest]:
     if status:
         qs = qs.filter(status=status)
     return qs
-
 
 def get_refund_by_id(refund_id: int) -> RefundRequest:
     """Retorna uma solicitação de reembolso pelo ID.
@@ -73,7 +68,6 @@ def get_refund_by_id(refund_id: int) -> RefundRequest:
         ).get(pk=refund_id)
     except RefundRequest.DoesNotExist:
         raise RefundNotFound()
-
 
 def get_users_with_rental_stats() -> QuerySet[User]:
     """Retorna todos os usuários com contagem de aluguéis (uso admin).

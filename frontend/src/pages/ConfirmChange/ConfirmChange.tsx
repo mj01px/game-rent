@@ -32,7 +32,6 @@ export default function ConfirmChange() {
     const confirmEmail = async () => {
         setLoading(true)
         try {
-            // Correção: Agora envia o 'type' que veio da URL dinamicamente
             await api.post('/users/profile/confirm-change/', { token, type })
             setStep('success')
         } catch (e: any) {
@@ -66,7 +65,6 @@ export default function ConfirmChange() {
         } finally { setLoading(false) }
     }
 
-    // Shared input style (light theme)
     const inputStyle = {
         width: '100%', padding: '11px 14px', borderRadius: '12px',
         fontSize: '14px', outline: 'none',
@@ -112,7 +110,7 @@ export default function ConfirmChange() {
                 gap: '16px',
                 textAlign: 'center',
             }}>
-                {/* Logo */}
+                {}
                 <button
                     onClick={() => navigate('/')}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}

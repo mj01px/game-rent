@@ -74,7 +74,7 @@ export default function MyGames() {
 
         return (
             <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-                {/* Header row */}
+                {}
                 <button
                     onClick={() => setExpanded(isOpen ? null : rental.id)}
                     className="w-full flex items-center gap-4 p-4 text-left"
@@ -106,7 +106,7 @@ export default function MyGames() {
                     </svg>
                 </button>
 
-                {/* Expanded details */}
+                {}
                 {isOpen && (
                     <div className="px-4 pb-4 flex flex-col gap-4" style={{ borderTop: '1px solid var(--border-light)' }}>
                         <div className="grid grid-cols-2 gap-3 pt-4">
@@ -123,7 +123,7 @@ export default function MyGames() {
                             ))}
                         </div>
 
-                        {/* Key */}
+                        {}
                         <div className="rounded-xl p-3" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
                             <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>Activation Key</p>
                             <div className="flex items-center justify-between gap-2">
@@ -137,7 +137,7 @@ export default function MyGames() {
                             </div>
                         </div>
 
-                        {/* Refund button */}
+                        {}
                         {canRefund && (
                             <button onClick={() => setRefundModal(rental.id)}
                                     style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, background: 'rgba(0,0,0,0.04)', color: 'var(--danger)', border: '1px solid var(--border)', borderRadius: '999px', cursor: 'pointer', alignSelf: 'flex-start', fontFamily: 'inherit' }}>
@@ -202,7 +202,7 @@ export default function MyGames() {
                 </>
             )}
 
-            {/* Refund Modal */}
+            {}
             {refundModal !== null && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center"
                      style={{ background: 'rgba(0,0,0,0.6)' }}

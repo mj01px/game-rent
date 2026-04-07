@@ -1,7 +1,6 @@
 import pytest
 from tests.conftest import GameFactory, GameKeyFactory
 
-
 @pytest.mark.django_db
 class TestGameListView:
     URL = "/api/games/"
@@ -36,7 +35,6 @@ class TestGameListView:
         assert len(response.data["data"]) == 1
         assert response.data["data"][0]["name"] == "Hollow Knight"
 
-
 @pytest.mark.django_db
 class TestGameDetailView:
     def url(self, pk):
@@ -63,7 +61,6 @@ class TestGameDetailView:
 
         assert response.data["data"]["available_keys"] == 3
 
-
 @pytest.mark.django_db
 class TestAdminGameCreateView:
     URL = "/api/games/admin/create/"
@@ -88,7 +85,6 @@ class TestAdminGameCreateView:
         assert response.status_code == 201
         assert response.data["data"]["name"] == "New Game"
         assert response.data["data"]["available_keys"] == 3
-
 
 @pytest.mark.django_db
 class TestAdminGameDetailView:

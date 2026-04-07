@@ -2,7 +2,6 @@ from django.db import models
 from django.contrib.auth.models import User
 from games.models import GameKey
 
-
 class Rental(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -22,7 +21,6 @@ class Rental(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.game_key.game.name}"
-
 
 class RefundRequest(models.Model):
     STATUS_CHOICES = [

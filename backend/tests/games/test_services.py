@@ -3,7 +3,6 @@ from games.models import Game, GameKey
 from games.services import add_game_keys, create_game, delete_game, update_game
 from tests.conftest import GameFactory, PublisherFactory
 
-
 @pytest.mark.django_db
 class TestCreateGame:
     def test_creates_game_with_required_fields(self):
@@ -51,7 +50,6 @@ class TestCreateGame:
 
         assert game.publisher is None
 
-
 @pytest.mark.django_db
 class TestUpdateGame:
     def test_updates_name(self, game):
@@ -81,7 +79,6 @@ class TestUpdateGame:
         game.refresh_from_db()
         assert game.rental_price == original_price
 
-
 @pytest.mark.django_db
 class TestAddGameKeys:
     def test_creates_correct_number_of_keys(self, game):
@@ -100,7 +97,6 @@ class TestAddGameKeys:
 
         key_values = list(game.keys.values_list("key", flat=True))
         assert len(key_values) == len(set(key_values))
-
 
 @pytest.mark.django_db
 class TestDeleteGame:

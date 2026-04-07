@@ -85,7 +85,7 @@ export default function Profile() {
             const url = data.data?.avatar ?? data.avatar
             setAvatarUrl(url)
             if (user) setUser({ ...user, avatar: url })
-        } catch { /* silent */ }
+        } catch {  }
         finally { setAvatarUploading(false) }
     }
 
@@ -180,12 +180,11 @@ export default function Profile() {
         </div>
     )
 
-    // ─── Main ───
     return (
         <div style={{ maxWidth: '480px', margin: '0 auto' }}>
             <BackBtn onClick={() => navigate('/')} />
 
-            {/* Avatar card */}
+            {}
             <div style={{ ...card, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 32px 32px' }}>
                 <div style={{ position: 'relative', marginBottom: '16px' }}>
                     {avatarUrl ? (
@@ -201,14 +200,7 @@ export default function Profile() {
                             <path d="M12 5v14M5 12h14" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
                         </svg>
                     </button>
-                    <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
-                           onChange={e => { if (e.target.files?.[0]) uploadAvatar(e.target.files[0]) }} />
-                </div>
-                <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>{user?.username}</h1>
-                <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{user?.email}</p>
-            </div>
-
-            {/* Account settings */}
+                    <input ref={fileRef} type="file" accept="image}
             <div style={card}>
                 <h2 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Account</h2>
                 {[
@@ -227,7 +219,7 @@ export default function Profile() {
                 ))}
             </div>
 
-            {/* Appearance */}
+            {}
             <div style={card}>
                 <h2 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Appearance</h2>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0' }}>
@@ -246,7 +238,7 @@ export default function Profile() {
                 </div>
             </div>
 
-            {/* Logout */}
+            {}
             <button onClick={() => { logout(); navigate('/') }}
                     style={{ width: '100%', padding: '12px', borderRadius: '999px', fontSize: '14px', fontWeight: 600, background: 'rgba(0,0,0,0.04)', color: 'var(--danger)', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit' }}>
                 Log Out

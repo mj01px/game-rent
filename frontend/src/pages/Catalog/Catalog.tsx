@@ -14,10 +14,6 @@ const SORTS = [
 ]
 const PAGE_SIZE = 12
 
-/**
- * Matches by substring OR by word-initial acronym.
- * "GTA" → matches "Grand Theft Auto" (G+T+A) and "GTA V" (direct).
- */
 function matchesSearch(name: string, query: string): boolean {
     if (!query.trim()) return true
     const q = query.toLowerCase().trim()
@@ -142,7 +138,6 @@ export default function Catalog() {
 
     useEffect(() => { setPage(1) }, [q, genre, sortIdx])
 
-    // Fecha dropdowns ao clicar fora
     useEffect(() => {
         const handler = (e: MouseEvent) => {
             if (genreRef.current && !genreRef.current.contains(e.target as Node))
@@ -169,7 +164,7 @@ export default function Catalog() {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-            {/* ── Header: título + dropdowns ───────────────────────── */}
+            {}
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '16px' }}>
                 <div>
                     <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -184,7 +179,7 @@ export default function Catalog() {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
 
-                    {/* Genre dropdown */}
+                    {}
                     <Dropdown
                         label={genre === 'All' ? 'Genre' : genre}
                         active={genre !== 'All'}
@@ -208,7 +203,7 @@ export default function Catalog() {
                         ))}
                     </Dropdown>
 
-                    {/* Sort dropdown */}
+                    {}
                     <Dropdown
                         label={SORTS[sortIdx].label}
                         active={sortIdx !== 0}
@@ -232,7 +227,7 @@ export default function Catalog() {
                         ))}
                     </Dropdown>
 
-                    {/* Clear — só aparece com filtro ativo */}
+                    {}
                     {hasActiveFilters && (
                         <button
                             onClick={() => { setGenre('All'); setSortIdx(0) }}
@@ -260,7 +255,7 @@ export default function Catalog() {
                 </div>
             </div>
 
-            {/* ── Grid ─────────────────────────────────────────────── */}
+            {}
             {loading ? (
                 <div style={{ display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(4, 1fr)' }}>
                     {Array.from({ length: 8 }).map((_, i) => <GameCardSkeleton key={i} />)}

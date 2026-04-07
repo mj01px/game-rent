@@ -16,7 +16,6 @@ import ConfirmChange from '../pages/ConfirmChange/ConfirmChange'
 import AdminPortal from '../pages/AdminPortal/AdminPortal'
 
 const router = createBrowserRouter([
-    // Homepage — floating pill topbar, full-width hero
     {
         path: '/',
         element: <HomeLayout />,
@@ -24,7 +23,6 @@ const router = createBrowserRouter([
             { index: true, element: <Home /> },
         ],
     },
-    // All inner pages — same floating pill topbar + centered content container
     {
         path: '/',
         element: <InnerLayout />,
@@ -41,7 +39,6 @@ const router = createBrowserRouter([
             { path: 'admin',            element: <AdminPortal /> },
         ],
     },
-    // Standalone pages — no topbar/nav
     { path: '/login',           element: <Login /> },
     { path: '/confirm-change',  element: <ConfirmChange /> },
 ])

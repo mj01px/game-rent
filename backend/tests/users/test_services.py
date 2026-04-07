@@ -21,7 +21,6 @@ from users.services import (
 )
 from tests.conftest import ProfileChangeTokenFactory, UserFactory
 
-
 @pytest.mark.django_db
 class TestRegisterUser:
     def test_creates_user_and_profile(self, db):
@@ -70,7 +69,6 @@ class TestRegisterUser:
 
         assert user.pk is not None
 
-
 @pytest.mark.django_db
 class TestConfirmEmailVerification:
     def test_marks_profile_as_verified(self, db):
@@ -98,7 +96,6 @@ class TestConfirmEmailVerification:
     def test_raises_for_invalid_uuid_string(self, db):
         with pytest.raises(InvalidToken):
             confirm_email_verification("not-a-uuid")
-
 
 @pytest.mark.django_db
 class TestRequestEmailChange:
@@ -129,7 +126,6 @@ class TestRequestEmailChange:
         assert tokens.count() == 1
         assert tokens.first().new_value == "new@test.com"
 
-
 @pytest.mark.django_db
 class TestForgotPassword:
     def test_sends_email_when_user_exists(self, db):
@@ -146,7 +142,6 @@ class TestForgotPassword:
             forgot_password("notfound@test.com")
 
         mock_email.assert_not_called()
-
 
 @pytest.mark.django_db
 class TestUpdateUsername:
@@ -174,7 +169,6 @@ class TestUpdateUsername:
 
         assert updated.username == "same"
 
-
 @pytest.mark.django_db
 class TestFavorites:
     def test_add_favorite(self, user, db):
@@ -198,4 +192,4 @@ class TestFavorites:
         assert not Favorite.objects.filter(user=user, game_id=42).exists()
 
     def test_remove_nonexistent_favorite_is_silent(self, user, db):
-        remove_favorite(user, 9999)  # não levanta exceção
+        remove_favorite(user, 9999)

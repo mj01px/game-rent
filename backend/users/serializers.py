@@ -3,7 +3,6 @@ from rest_framework import serializers
 
 from core.validators import validate_password_strength
 
-
 class RegisterSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
     email = serializers.EmailField()
@@ -16,7 +15,6 @@ class RegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError(e.messages)
         return value
 
-
 class UpdateUsernameSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
 
@@ -25,19 +23,15 @@ class UpdateUsernameSerializer(serializers.Serializer):
             raise serializers.ValidationError("Este já é o seu nome de usuário.")
         return value
 
-
 class RequestEmailChangeSerializer(serializers.Serializer):
     new_email = serializers.EmailField()
-
 
 class ConfirmChangeSerializer(serializers.Serializer):
     """Valida o corpo do POST /confirm-change/ para todos os tipos de mudança."""
 
     token = serializers.CharField()
     type = serializers.ChoiceField(choices=["verify", "email", "email_new", "password"])
-    # Usado apenas quando type == "email"
     confirmed = serializers.BooleanField(required=False, default=False)
-    # Usado apenas quando type == "password"
     new_password = serializers.CharField(required=False, write_only=True)
 
     def validate_new_password(self, value: str) -> str:
@@ -47,10 +41,8 @@ class ConfirmChangeSerializer(serializers.Serializer):
             raise serializers.ValidationError(e.messages)
         return value
 
-
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
-
 
 class FavoriteSerializer(serializers.Serializer):
     game_id = serializers.IntegerField()

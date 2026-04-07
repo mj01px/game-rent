@@ -22,7 +22,6 @@ export default function PublisherPage() {
     const publisher = games[0]?.publisher
     const publisherName = publisher?.name || 'Publisher'
 
-    // Derived stats
     const avgRating = games.length
         ? games.reduce((sum, g) => sum + (parseFloat(g.rating) || 0), 0) / games.length
         : 0
@@ -32,7 +31,7 @@ export default function PublisherPage() {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
 
-            {/* Back */}
+            {}
             <button
                 onClick={() => navigate(-1)}
                 style={{
@@ -51,7 +50,7 @@ export default function PublisherPage() {
                 Back
             </button>
 
-            {/* ── Publisher header card ─────────────────────────── */}
+            {}
             <div style={{
                 background: 'var(--surface)',
                 border: '1px solid var(--border)',
@@ -62,7 +61,7 @@ export default function PublisherPage() {
                 alignItems: 'center',
                 gap: '28px',
             }}>
-                {/* Avatar */}
+                {}
                 <div style={{
                     width: '80px', height: '80px',
                     borderRadius: '20px',
@@ -83,7 +82,7 @@ export default function PublisherPage() {
                     )}
                 </div>
 
-                {/* Name + meta */}
+                {}
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <h1 style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px', letterSpacing: '-0.01em' }}>
                         {publisherName}
@@ -105,7 +104,7 @@ export default function PublisherPage() {
                     )}
                 </div>
 
-                {/* Stats — right side */}
+                {}
                 {!loading && games.length > 0 && (
                     <div style={{ display: 'flex', gap: '24px', flexShrink: 0 }}>
                         <div style={{ textAlign: 'center' }}>
@@ -139,7 +138,7 @@ export default function PublisherPage() {
                 )}
             </div>
 
-            {/* ── Games grid ───────────────────────────────────────── */}
+            {}
             <div>
                 <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '20px' }}>
                     Games by {publisherName}

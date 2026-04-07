@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-
 class Publisher(models.Model):
     name = models.CharField(max_length=200, unique=True)
 
@@ -51,7 +50,6 @@ class Game(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        # Garante consistência: is_featured só pode ser True se rating >= 4.7
         if self.is_featured and self.rating < self.FEATURED_MIN_RATING:
             self.is_featured = False
         super().save(*args, **kwargs)
@@ -59,7 +57,6 @@ class Game(models.Model):
     @property
     def platform_display(self):
         return dict(self.PLATFORM_CHOICES).get(self.platform, self.platform)
-
 
 class GameKey(models.Model):
     STATUS_CHOICES = [

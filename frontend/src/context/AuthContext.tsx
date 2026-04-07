@@ -57,7 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const { data } = await getProfile()
             setUser(data.data)
         } catch {
-            // silent
         }
     }
 

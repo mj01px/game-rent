@@ -4,7 +4,6 @@ from unittest.mock import patch
 from users.models import ProfileChangeToken
 from tests.conftest import ProfileChangeTokenFactory, UserFactory
 
-
 @pytest.mark.django_db
 class TestRegisterView:
     URL = "/api/users/register/"
@@ -41,7 +40,6 @@ class TestRegisterView:
         })
 
         assert response.status_code == 400
-
 
 @pytest.mark.django_db
 class TestLoginView:
@@ -95,7 +93,6 @@ class TestLoginView:
         assert "user" in response.data
         assert response.data["user"]["username"] == "withdata"
 
-
 @pytest.mark.django_db
 class TestProfileView:
     URL = "/api/users/profile/"
@@ -110,7 +107,6 @@ class TestProfileView:
         assert response.status_code == 200
         assert response.data["data"]["username"] == user.username
         assert response.data["data"]["email"] == user.email
-
 
 @pytest.mark.django_db
 class TestUpdateUsernameView:
@@ -133,7 +129,6 @@ class TestUpdateUsernameView:
         response = auth_client.patch(self.URL, {"username": user.username})
 
         assert response.status_code == 400
-
 
 @pytest.mark.django_db
 class TestConfirmChangeView:
@@ -185,7 +180,6 @@ class TestConfirmChangeView:
         user.refresh_from_db()
         assert user.check_password("NewPass@99")
 
-
 @pytest.mark.django_db
 class TestFavoritesView:
     URL = "/api/users/favorites/"
@@ -218,7 +212,6 @@ class TestFavoritesView:
         response = auth_client.get(self.URL)
 
         assert set(response.data["data"]["favorites"]) == {10, 20}
-
 
 @pytest.mark.django_db
 class TestForgotPasswordView:
