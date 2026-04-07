@@ -601,6 +601,7 @@ export default function AdminPortal() {
                                     <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>PNG, JPG up to 5MB</p>
                                 </div>
                                 <input ref={imgRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => setImageFile(e.target.files?.[0] || null)} />
+                            </div>
                         </div>
                         <div>
                             <label style={labelCls}>Publisher</label>
