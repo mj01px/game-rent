@@ -200,6 +200,9 @@ export default function Profile() {
                     </button>
                     <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
                            onChange={e => { if (e.target.files?.[0]) uploadAvatar(e.target.files[0]) }} />
+                </div>
+                <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>{user?.username}</h1>
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{user?.email}</p>
             </div>
             <div style={card}>
                 <h2 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Account</h2>
