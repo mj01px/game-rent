@@ -38,8 +38,8 @@ const gameRent = {
 
 ```
 game-rent/
-├── game-rent-api/     # Django REST API  →  http://localhost:8000
-└── game-rent-app/     # React Frontend  →  http://localhost:5173
+├── backend/     # Django REST API  →  http://localhost:8000
+└── frontend/     # React Frontend  →  http://localhost:5173
 ```
 
 ---
